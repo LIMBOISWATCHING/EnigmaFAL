@@ -93,6 +93,13 @@ class Attacks {
         document.getElementById("atk-abil-btn-add-effect")
             ?.addEventListener("click", () => this.addPendingAbilityEffect());
 
+        document.getElementById("atk-search-attacks")
+            ?.addEventListener("input", () => this.loadAttacks());
+        document.getElementById("atk-search-abilities")
+            ?.addEventListener("input", () => this.loadAbilities());
+        document.getElementById("atk-search-effects")
+            ?.addEventListener("input", () => this.loadEffects());
+
         this.container
             ?.addEventListener("input", (event) => {
                 if (event.target.closest(".atk-form")) this.dirty = true;
@@ -144,8 +151,19 @@ class Attacks {
             attacks = await MC.Services.Attacks.findOwned();
         } catch (e) { attacks = []; }
 
+        attacks = this.sortedByName(attacks);
+        attacks = this.filterBySearch(attacks, "atk-search-attacks", (attack) => [
+            attack.name,
+            attack.id,
+            attack.description,
+            attack.category,
+            attack.target,
+            attack.range,
+            this.formatDamage(attack.damage || {})
+        ]);
+
         if (!attacks.length) {
-            list.innerHTML = `<p class="atk-empty">Nenhum ataque criado ainda.</p>`;
+            list.innerHTML = `<p class="atk-empty">${this.hasSearch("atk-search-attacks") ? "Nenhum ataque encontrado." : "Nenhum ataque criado ainda."}</p>`;
             return;
         }
 
@@ -400,8 +418,22 @@ class Attacks {
             abilities = await MC.Services.Abilities.findOwned();
         } catch (e) { abilities = []; }
 
+        abilities = this.sortedByName(abilities);
+        abilities = this.filterBySearch(abilities, "atk-search-abilities", (ability) => [
+            ability.name,
+            ability.id,
+            ability.description,
+            ability.category,
+            ability.trigger,
+            ability.target,
+            ability.range,
+            ability.energyCost,
+            ability.limitCost,
+            ability.cooldown
+        ]);
+
         if (!abilities.length) {
-            list.innerHTML = `<p class="atk-empty">Nenhuma habilidade criada ainda.</p>`;
+            list.innerHTML = `<p class="atk-empty">${this.hasSearch("atk-search-abilities") ? "Nenhuma habilidade encontrada." : "Nenhuma habilidade criada ainda."}</p>`;
             return;
         }
 
@@ -644,8 +676,21 @@ class Attacks {
             effects = await MC.Services.Effects.findOwned();
         } catch (e) { effects = []; }
 
+        effects = this.sortedByName(effects);
+        effects = this.filterBySearch(effects, "atk-search-effects", (effect) => [
+            effect.name,
+            effect.id,
+            effect.description,
+            effect.category,
+            effect.target,
+            effect.application,
+            effect.removeOn,
+            effect.tick?.type,
+            effect.tick?.attribute
+        ]);
+
         if (!effects.length) {
-            list.innerHTML = `<p class="atk-empty">Nenhum efeito criado ainda.</p>`;
+            list.innerHTML = `<p class="atk-empty">${this.hasSearch("atk-search-effects") ? "Nenhum efeito encontrado." : "Nenhum efeito criado ainda."}</p>`;
             return;
         }
 
@@ -852,6 +897,45 @@ class Attacks {
         if (bonus > 0) return `${diceText} + ${bonus}`;
         if (bonus < 0) return `${diceText} - ${Math.abs(bonus)}`;
         return diceText;
+
+    }
+
+    sortedByName(items = []) {
+
+        return [...items].sort((a, b) => {
+            const nameA = String(a?.name || "").toLocaleLowerCase("pt-BR");
+            const nameB = String(b?.name || "").toLocaleLowerCase("pt-BR");
+            if (nameA !== nameB) return nameA.localeCompare(nameB, "pt-BR");
+            return String(a?.id || "").localeCompare(String(b?.id || ""), "pt-BR");
+        });
+
+    }
+
+    filterBySearch(items = [], inputId, fieldsFactory) {
+
+        const query = this.getSearch(inputId);
+        if (!query) return items;
+
+        return items.filter(item => {
+            const fields = fieldsFactory(item)
+                .filter(value => value !== null && value !== undefined)
+                .map(value => String(value).toLocaleLowerCase("pt-BR"));
+            return fields.some(value => value.includes(query));
+        });
+
+    }
+
+    getSearch(inputId) {
+
+        return (document.getElementById(inputId)?.value || "")
+            .trim()
+            .toLocaleLowerCase("pt-BR");
+
+    }
+
+    hasSearch(inputId) {
+
+        return Boolean(this.getSearch(inputId));
 
     }
 
