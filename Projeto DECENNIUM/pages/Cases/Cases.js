@@ -446,7 +446,7 @@ class Cases {
     async addQuickBoardNote() {
         if (!this.current) return;
 
-        const data = await this.openArchiveForm({
+        const data = await this.openFieldsArchiveEditor({
             heading: "Nova nota do quadro",
             fields: [
                 { key: "title", label: "Titulo", value: "Nota", multiline: false },
