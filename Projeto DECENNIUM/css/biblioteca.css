@@ -455,6 +455,8 @@
     outline:none;
     font-size:17px;
     line-height:1.65;
+    text-rendering:optimizeLegibility;
+    hyphens:auto;
 }
 
 .book-page-editor[contenteditable="false"]{
@@ -485,7 +487,7 @@
 
 .library-format-toolbar{
     display:grid;
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-template-columns:repeat(4, minmax(0, 1fr));
     gap:5px;
     width:100%;
     min-width:0;
