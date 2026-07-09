@@ -895,9 +895,9 @@ class Library {
         if (!this.activeBook) return;
 
         try {
-            const pageSaved = await this.savePage({ silent: true, render: false });
-            if (!pageSaved) {
-                await MC.UI.alert("Nao foi possivel salvar a pagina atual.");
+            const pagesSaved = await this.saveAllPages({ silent: true });
+            if (!pagesSaved) {
+                await MC.UI.alert("Nao foi possivel salvar todas as paginas.");
                 return;
             }
             this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, {
@@ -957,18 +957,7 @@ class Library {
         if (!page) return true;
 
         try {
-            const editor = this.byId("library-editor");
-            const paperTitle = this.byId("library-paper-title")?.textContent?.trim() || "";
-            const sideTitle = this.byId("library-page-title")?.value.trim() || "";
-            const updated = await MC.Services.Library.updatePage(page.id, {
-                title: sideTitle || paperTitle,
-                content: this.stripHighlightMarkup(editor?.innerHTML || ""),
-                drawings: page.drawings || [],
-                images: page.images || [],
-                notes: page.notes || [],
-                references: page.references || [],
-                highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || "")
-            });
+            const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page, page === this.currentPage()));
             this.pages[this.activePageIndex] = updated;
             this.dirty = false;
             if (options.render !== false) this.renderOpenBook();
@@ -980,13 +969,74 @@ class Library {
 
     }
 
+    async saveAllPages(options = {}) {
+
+        if (!this.pages.length) return true;
+
+        let failed = false;
+
+        for (let index = 0; index < this.pages.length; index++) {
+            const page = this.pages[index];
+            if (!page || page.torn || page.deleted) continue;
+
+            try {
+                const updated = await MC.Services.Library.updatePage(
+                    page.id,
+                    this.pageSavePayload(page, index === this.activePageIndex)
+                );
+                this.pages[index] = updated;
+            } catch (err) {
+                const message = String(err?.message || "");
+                if (message.includes("Somente quem escreveu")) continue;
+                failed = true;
+                if (!options.silent) await MC.UI.alert(message || "Erro ao salvar paginas.");
+                break;
+            }
+        }
+
+        if (!failed) this.dirty = false;
+        return !failed;
+
+    }
+
+    pageSavePayload(page, fromDom = false) {
+
+        if (fromDom) {
+            const editor = this.byId("library-editor");
+            const paperTitle = this.byId("library-paper-title")?.textContent?.trim() || "";
+            const sideTitle = this.byId("library-page-title")?.value.trim() || "";
+
+            return {
+                title: sideTitle || paperTitle,
+                content: this.stripHighlightMarkup(editor?.innerHTML || page.content || ""),
+                drawings: page.drawings || [],
+                images: page.images || [],
+                notes: page.notes || [],
+                references: page.references || [],
+                highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || "")
+            };
+        }
+
+        return {
+            title: page.title || "",
+            content: page.content || "",
+            drawings: page.drawings || [],
+            images: page.images || [],
+            notes: page.notes || [],
+            references: page.references || [],
+            highlightWords: page.highlightWords || [],
+            pageNumber: page.pageNumber
+        };
+
+    }
+
     async saveBeforeLeavingBook() {
 
         if (!this.activeBook) return true;
 
-        const pageSaved = await this.savePage({ silent: true, render: false });
-        if (!pageSaved) {
-            await MC.UI.alert("Nao foi possivel salvar a pagina antes de sair.");
+        const pagesSaved = await this.saveAllPages({ silent: true });
+        if (!pagesSaved) {
+            await MC.UI.alert("Nao foi possivel salvar as paginas antes de sair.");
             return false;
         }
 
