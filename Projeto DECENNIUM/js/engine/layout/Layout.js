@@ -35,6 +35,8 @@ class Layout extends CoreModule {
 
         this.rollLogsCollapsed = false;
 
+        this.dicePanelClosed = false;
+
     }
 
     // ==================================================
@@ -217,6 +219,7 @@ class Layout extends CoreModule {
 
             <div id="mc-dice-popup" class="mc-dice-popup"></div>
             <div class="mc-dice-controls">
+                <button id="mc-dice-close" type="button" title="Fechar dados">X</button>
                 <button id="mc-dice-toggle" type="button" title="Recolher logs">Logs</button>
                 <select id="mc-dice-type">
                     <option value="coin">Moeda</option>
@@ -243,6 +246,7 @@ class Layout extends CoreModule {
                 </label>
                 <button id="mc-dice-roll" type="button">Girar</button>
             </div>
+            <button id="mc-dice-open" type="button" title="Abrir dados">Dados</button>
 
         `;
 
@@ -255,7 +259,43 @@ class Layout extends CoreModule {
         panel.querySelector("#mc-dice-toggle")
             ?.addEventListener("click", () => this.toggleRollLogs());
 
+        panel.querySelector("#mc-dice-close")
+            ?.addEventListener("click", () => this.closeDicePanel());
+
+        panel.querySelector("#mc-dice-open")
+            ?.addEventListener("click", () => this.openDicePanel());
+
         this.updateDiceCustomVisibility();
+
+        this.updateDicePanelVisibility();
+
+    }
+
+    closeDicePanel() {
+
+        this.dicePanelClosed = true;
+
+        this.updateDicePanelVisibility();
+
+    }
+
+    openDicePanel() {
+
+        this.dicePanelClosed = false;
+
+        this.updateDicePanelVisibility();
+
+    }
+
+    updateDicePanelVisibility() {
+
+        const panel = document.getElementById("mc-dice-panel");
+
+        if (!panel) return;
+
+        panel.classList.toggle("closed", this.dicePanelClosed);
+
+        this.renderRollLogs();
 
     }
 
@@ -342,8 +382,17 @@ class Layout extends CoreModule {
     renderRollLogs() {
 
         const popup = document.getElementById("mc-dice-popup");
+        const panel = document.getElementById("mc-dice-panel");
 
         if (!popup) return;
+
+        if (panel?.classList.contains("closed")) {
+
+            popup.innerHTML = "";
+            popup.classList.remove("collapsed");
+            return;
+
+        }
 
         popup.classList.toggle("collapsed", this.rollLogsCollapsed);
 

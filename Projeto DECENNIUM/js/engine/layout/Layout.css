@@ -660,6 +660,61 @@ input:focus{
 
 }
 
+#mc-dice-close{
+
+    color:#ff6767;
+
+    border-color:#513030;
+
+}
+
+#mc-dice-open{
+
+    display:none;
+
+    min-height:36px;
+
+    padding:7px 10px;
+
+    border:1px solid var(--green);
+
+    border-top:none;
+
+    border-right:none;
+
+    background:#080808;
+
+    color:var(--green);
+
+    font-family:Consolas, "Courier New", monospace;
+
+    font-size:11px;
+
+    letter-spacing:1px;
+
+    text-transform:uppercase;
+
+    cursor:pointer;
+
+    pointer-events:auto;
+
+    box-shadow:0 0 14px rgba(0,0,0,.55);
+
+}
+
+#mc-dice-panel.closed .mc-dice-controls,
+#mc-dice-panel.closed .mc-dice-popup{
+
+    display:none;
+
+}
+
+#mc-dice-panel.closed #mc-dice-open{
+
+    display:block;
+
+}
+
 .mc-dice-popup{
 
     width:210px;
