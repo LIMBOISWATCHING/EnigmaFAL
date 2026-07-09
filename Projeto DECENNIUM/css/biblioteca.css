@@ -357,11 +357,14 @@
 }
 
 .library-page-arrow{
+    position:relative;
+    z-index:20;
     border:1px solid #181818;
     background:#080808;
     color:#00ff66;
     font-size:22px;
     cursor:pointer;
+    pointer-events:auto;
 }
 
 .library-paper{
@@ -385,6 +388,11 @@
     outline-color:rgba(255,95,95,.85);
 }
 
+.library-paper.torn{
+    background:transparent;
+    box-shadow:none;
+}
+
 .library-page-number{
     position:absolute;
     top:18px;
@@ -392,6 +400,17 @@
     color:#6b4d2c;
     font-size:12px;
     z-index:4;
+}
+
+.library-paper.torn .library-page-number{
+    right:auto;
+    left:86px;
+    color:#8d6a3f;
+    opacity:.78;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    font-family:Consolas, "Courier New", monospace;
+    font-size:10px;
 }
 
 .library-written-page-title{
@@ -787,16 +806,13 @@
     inset:0;
     pointer-events:none;
     background:
-        radial-gradient(ellipse at 72% 34%, rgba(118,79,39,.10), transparent 34%),
-        linear-gradient(90deg, rgba(78,47,21,.23), transparent 72px),
-        repeating-linear-gradient(180deg, transparent 0 108px, rgba(82,51,25,.13) 108px 111px, transparent 111px 218px);
-    background-position:0 0, 0 0, 92px 10px;
-    background-size:100% 100%, 100% 100%, calc(100% - 170px) 100%;
+        linear-gradient(90deg, rgba(64,35,16,.34), rgba(64,35,16,.10) 42px, transparent 108px);
+    background-position:0 0;
+    background-size:130px 100%;
     background-repeat:no-repeat;
-    opacity:.82;
+    opacity:.95;
     box-shadow:
-        inset 72px 0 60px rgba(77,43,18,.13),
-        inset 0 0 65px rgba(95,58,25,.10);
+        inset 64px 0 42px rgba(0,0,0,.18);
 }
 
 .library-torn-page::before{
@@ -821,15 +837,15 @@
 .library-torn-page::after{
     content:"";
     position:absolute;
-    left:74px;
-    right:58px;
-    top:48px;
-    bottom:58px;
-    border-left:1px dashed rgba(90,55,26,.18);
+    left:54px;
+    top:0;
+    bottom:0;
+    width:88px;
     background:
-        linear-gradient(90deg, rgba(216,196,156,.12), transparent 18%),
-        repeating-linear-gradient(180deg, transparent 0 104px, rgba(94,63,32,.12) 104px 107px, transparent 107px 208px);
-    opacity:.55;
+        radial-gradient(ellipse at 0 18%, rgba(216,196,156,.45), transparent 42px),
+        radial-gradient(ellipse at 0 54%, rgba(216,196,156,.38), transparent 48px),
+        radial-gradient(ellipse at 0 82%, rgba(216,196,156,.34), transparent 44px);
+    opacity:.5;
 }
 
 .library-torn-page span{
