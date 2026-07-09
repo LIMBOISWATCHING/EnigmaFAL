@@ -97,8 +97,11 @@ class Library {
 
     async close() {
 
-        if (!this.dirty) return true;
-        return await MC.UI.confirm("Existem alteracoes nao salvas na Biblioteca. Sair sem salvar?");
+        if (this.activeBook) {
+            return await this.saveBeforeLeavingBook();
+        }
+
+        return true;
 
     }
 
@@ -213,6 +216,11 @@ class Library {
 
     async openBook(id, requestedPage = 1, pushHistory = true) {
 
+        if (this.activeBook && (this.activeBook.id !== id || this.currentPage())) {
+            const saved = await this.saveBeforeLeavingBook();
+            if (!saved) return;
+        }
+
         const book = await MC.Services.Library.findBook(id);
         if (!book) return;
 
@@ -244,9 +252,9 @@ class Library {
 
     }
 
-    async closeReader() {
+    async closeReader(options = {}) {
 
-        if (this.dirty && !await MC.UI.confirm("Existem alteracoes nao salvas. Fechar o livro mesmo assim?")) return;
+        if (!options.skipSave && !await this.saveBeforeLeavingBook()) return;
         this.activeBook = null;
         this.pages = [];
         this.dirty = false;
@@ -887,6 +895,11 @@ class Library {
         if (!this.activeBook) return;
 
         try {
+            const pageSaved = await this.savePage({ silent: true, render: false });
+            if (!pageSaved) {
+                await MC.UI.alert("Nao foi possivel salvar a pagina atual.");
+                return;
+            }
             this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, {
                 title: this.byId("library-edit-title")?.value.trim() || this.activeBook.title,
                 seal: this.byId("library-edit-seal")?.value || this.activeBook.seal,
@@ -911,7 +924,7 @@ class Library {
 
         try {
             await MC.Services.Library.deleteBook(this.activeBook.id);
-            this.closeReader();
+            this.closeReader({ skipSave: true });
             await this.loadBooks();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao apagar livro.");
@@ -938,10 +951,10 @@ class Library {
 
     }
 
-    async savePage() {
+    async savePage(options = {}) {
 
         const page = this.currentPage();
-        if (!page) return;
+        if (!page) return true;
 
         try {
             const editor = this.byId("library-editor");
@@ -958,9 +971,41 @@ class Library {
             });
             this.pages[this.activePageIndex] = updated;
             this.dirty = false;
-            this.renderOpenBook();
+            if (options.render !== false) this.renderOpenBook();
+            return true;
         } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao salvar pagina.");
+            if (!options.silent) await MC.UI.alert(err.message || "Erro ao salvar pagina.");
+            return false;
+        }
+
+    }
+
+    async saveBeforeLeavingBook() {
+
+        if (!this.activeBook) return true;
+
+        const pageSaved = await this.savePage({ silent: true, render: false });
+        if (!pageSaved) {
+            await MC.UI.alert("Nao foi possivel salvar a pagina antes de sair.");
+            return false;
+        }
+
+        try {
+            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, {
+                title: this.byId("library-edit-title")?.value.trim() || this.activeBook.title,
+                seal: this.byId("library-edit-seal")?.value || this.activeBook.seal,
+                fontFamily: this.byId("library-edit-font")?.value || this.activeBook.fontFamily,
+                textColor: this.byId("library-edit-color")?.value || this.activeBook.textColor,
+                coverColor: this.byId("library-cover-color")?.value || this.activeBook.coverColor,
+                coverBorderColor: this.byId("library-cover-border")?.value || this.activeBook.coverBorderColor,
+                password: this.byId("library-edit-password")?.value.trim() || ""
+            });
+            this.dirty = false;
+            await this.loadBooks();
+            return true;
+        } catch (err) {
+            await MC.UI.alert(err.message || "Nao foi possivel salvar o livro antes de sair.");
+            return false;
         }
 
     }
@@ -983,8 +1028,7 @@ class Library {
     async changePage(delta) {
 
         if (!this.pages.length) return;
-        if (this.dirty && !await MC.UI.confirm("Existem alteracoes nao salvas. Trocar de pagina mesmo assim?")) return;
-        this.dirty = false;
+        if (!await this.savePage({ silent: true, render: false })) return;
         this.goToPageIndex(Math.max(0, Math.min(this.pages.length - 1, this.activePageIndex + delta)), true);
 
     }
@@ -997,8 +1041,7 @@ class Library {
             await MC.UI.alert("Pagina nao encontrada.");
             return;
         }
-        if (this.dirty && !await MC.UI.confirm("Existem alteracoes nao salvas. Ir para outra pagina mesmo assim?")) return;
-        this.dirty = false;
+        if (!await this.savePage({ silent: true, render: false })) return;
         this.goToPageIndex(index, true);
 
     }
@@ -1026,10 +1069,9 @@ class Library {
             return;
         }
 
-        if (this.dirty && !await MC.UI.confirm("Existem alteracoes nao salvas. Voltar mesmo assim?")) return;
+        if (!await this.savePage({ silent: true, render: false })) return;
 
         const previous = this.pageHistory.pop();
-        this.dirty = false;
 
         if (previous.bookId !== this.activeBook?.id) {
             await this.openBook(previous.bookId, previous.pageNumber, false);
