@@ -373,6 +373,117 @@ input:focus{
 }
 
 /* ==========================================================
+   RESPONSIVE APP SHELL
+========================================================== */
+
+#mc-layout,
+#mc-content{
+    min-width:0;
+    min-height:0;
+}
+
+#mc-sidebar{
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+}
+
+@media (max-height:720px) and (min-width:861px){
+    #mc-sidebar{
+        overflow-y:auto;
+    }
+
+    .mc-sidebar-header{
+        padding:12px 8px;
+    }
+
+    .mc-sidebar-header h1{
+        font-size:15px;
+        letter-spacing:2px;
+    }
+}
+
+@media (max-width:860px){
+    :root{
+        --footer-height:32px;
+    }
+
+    #mc-layout{
+        grid-template-columns:1fr;
+        grid-template-rows:auto minmax(0, 1fr) var(--footer-height);
+        grid-template-areas:
+            "sidebar"
+            "content"
+            "footer";
+    }
+
+    #mc-sidebar{
+        max-height:118px;
+        flex-direction:row;
+        align-items:stretch;
+        border-right:none;
+        border-bottom:2px solid var(--green);
+        overflow-x:auto;
+        overflow-y:hidden;
+    }
+
+    .mc-sidebar-header{
+        flex:0 0 130px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px;
+        border-top:none;
+        border-bottom:none;
+        border-right:1px solid var(--green);
+    }
+
+    .mc-sidebar-header h1{
+        font-size:13px;
+        letter-spacing:2px;
+        line-height:1.25;
+    }
+
+    .mc-sidebar-header small{
+        display:none;
+    }
+
+    #mc-content{
+        overflow:auto;
+    }
+
+    #mc-footer{
+        padding:0 10px;
+        font-size:12px;
+    }
+
+    #mc-dice-panel{
+        top:118px;
+    }
+}
+
+@media (max-width:520px){
+    #mc-sidebar{
+        max-height:96px;
+    }
+
+    .mc-sidebar-header{
+        flex-basis:96px;
+    }
+
+    .mc-sidebar-header h1{
+        font-size:11px;
+        letter-spacing:1px;
+    }
+
+    #mc-dice-panel{
+        top:96px;
+        transform:scale(.88);
+        transform-origin:top right;
+    }
+}
+
+/* ==========================================================
    DICE PANEL
 ========================================================== */
 
@@ -631,4 +742,53 @@ input:focus{
     50%{ transform:scale(1.08); }
     100%{ transform:scale(1); }
 
+}
+
+@media (max-width:860px){
+    html,
+    body{
+        overflow:auto;
+    }
+
+    #mc-layout{
+        width:100%;
+        min-height:100vh;
+        height:auto;
+    }
+
+    #mc-dice-panel{
+        top:118px;
+    }
+
+    .dashboard-page,
+    .chars-page,
+    .atk-page,
+    .cases-page,
+    .library-page,
+    .basic-page{
+        width:100%;
+        min-width:0;
+        max-width:100%;
+        padding-left:16px;
+        padding-right:16px;
+        overflow-x:auto;
+    }
+}
+
+@media (max-width:520px){
+    #mc-dice-panel{
+        top:96px;
+        transform:scale(.88);
+        transform-origin:top right;
+    }
+
+    .dashboard-page,
+    .chars-page,
+    .atk-page,
+    .cases-page,
+    .library-page,
+    .basic-page{
+        padding-left:10px;
+        padding-right:10px;
+    }
 }
