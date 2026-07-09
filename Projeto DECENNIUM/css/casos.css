@@ -2405,3 +2405,94 @@ body.case-board-fullscreen-open {
         grid-template-columns:1fr;
     }
 }
+
+@media (max-width: 860px) {
+    .cases-page {
+        width:100%;
+        min-width:0;
+        padding:22px 16px 44px;
+        overflow-x:hidden;
+    }
+
+    .case-create-form,
+    .case-photo-add-form,
+    .case-dossier-form {
+        grid-template-columns:1fr;
+    }
+
+    .case-field.wide,
+    .case-dossier-form .case-textarea {
+        grid-column:1;
+    }
+
+    .cases-toolbar,
+    .case-file-actions,
+    .case-board-tools {
+        width:100%;
+        justify-content:flex-start;
+    }
+
+    .case-file-head {
+        padding:18px;
+    }
+
+    .case-main-photo {
+        width:130px;
+        min-width:130px;
+        height:150px;
+    }
+
+    .case-file-actions {
+        min-width:0;
+    }
+
+    .case-board-area {
+        padding:10px;
+    }
+
+    .case-board {
+        min-height:540px;
+    }
+
+    .case-board-tools .case-input,
+    .case-board-tools .case-btn,
+    .case-board-tools .case-btn-primary {
+        flex:1 1 180px;
+        min-width:0;
+    }
+
+    .case-line-color {
+        width:auto;
+    }
+}
+
+@media (max-width: 520px) {
+    .cases-page {
+        padding:18px 10px 38px;
+    }
+
+    .cases-header h1,
+    .case-file-head h2 {
+        font-size:22px;
+        letter-spacing:3px;
+        overflow-wrap:anywhere;
+    }
+
+    .case-card {
+        padding:24px 16px 18px;
+    }
+
+    .case-card-title-row {
+        flex-direction:column;
+    }
+
+    .case-main-photo {
+        width:100%;
+        min-width:0;
+        max-width:210px;
+    }
+
+    .case-board {
+        min-height:460px;
+    }
+}

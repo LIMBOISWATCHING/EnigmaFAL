@@ -664,3 +664,174 @@ a:hover{
     height:100%;
 
 }
+
+/* =======================================================
+   RESPONSIVE MENU
+======================================================= */
+
+@media (max-height:720px) and (min-width:861px){
+    .mc-menu-button{
+        padding:10px 14px;
+    }
+
+    .menu-text{
+        font-size:12px;
+    }
+
+    .mc-menu-dcode{
+        padding:8px 0;
+    }
+}
+
+@media (max-width:860px){
+    html,
+    body{
+        overflow:auto;
+    }
+
+    #mc-app{
+        min-width:0;
+        min-height:100vh;
+        height:auto;
+        flex-direction:column;
+    }
+
+    #mc-sidebar{
+        width:auto;
+        max-height:118px;
+        flex-direction:row;
+        align-items:stretch;
+        overflow-x:auto;
+        overflow-y:hidden;
+        border-right:none;
+        border-bottom:2px solid var(--mc-green, #1cff6b);
+    }
+
+    #mc-main{
+        min-width:0;
+        min-height:0;
+        overflow:visible;
+    }
+
+    #mc-content{
+        min-width:0;
+        min-height:0;
+        height:auto;
+        overflow:auto;
+    }
+
+    .mc-sidebar-header{
+        flex:0 0 130px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:8px;
+        border-top:none;
+        border-bottom:none;
+        border-right:1px solid var(--mc-green, #1cff6b);
+    }
+
+    .mc-sidebar-header h1{
+        font-size:13px;
+        letter-spacing:2px;
+        line-height:1.25;
+    }
+
+    .mc-sidebar-header small{
+        display:none;
+    }
+
+    .mc-menu-items,
+    .mc-menu-dcode,
+    .mc-menu-logout{
+        flex:0 0 auto;
+        display:flex;
+        flex-direction:row;
+        align-items:stretch;
+        min-width:max-content;
+    }
+
+    .mc-menu-items{
+        flex:1 0 auto;
+    }
+
+    .mc-menu-dcode,
+    .mc-menu-logout{
+        margin-top:0;
+        padding:0;
+        border-top:none;
+        border-left:1px solid var(--mc-green, #1cff6b);
+    }
+
+    .mc-menu-button,
+    .mc-menu-dcode .mc-menu-button{
+        width:auto;
+        min-width:86px;
+        min-height:84px;
+        flex:0 0 auto;
+        flex-direction:column;
+        justify-content:center;
+        gap:5px;
+        padding:8px 10px;
+        border-left:none;
+        border-bottom:3px solid transparent;
+        text-align:center;
+    }
+
+    .mc-menu-button:hover,
+    .mc-menu-button.active{
+        border-left-color:transparent;
+        border-bottom-color:var(--mc-green, #1cff6b);
+    }
+
+    .menu-icon{
+        width:auto;
+        font-size:18px;
+    }
+
+    .menu-icon img{
+        width:26px;
+        height:26px;
+        object-fit:contain;
+    }
+
+    .menu-text{
+        width:100%;
+        flex:0 0 auto;
+        font-size:11px;
+        line-height:1.15;
+        white-space:normal;
+        overflow-wrap:anywhere;
+    }
+}
+
+@media (max-width:520px){
+    #mc-sidebar{
+        max-height:96px;
+    }
+
+    .mc-sidebar-header{
+        flex-basis:96px;
+    }
+
+    .mc-sidebar-header h1{
+        font-size:11px;
+        letter-spacing:1px;
+    }
+
+    .mc-menu-button,
+    .mc-menu-dcode .mc-menu-button{
+        min-width:72px;
+        min-height:72px;
+        padding:6px 8px;
+    }
+
+    .menu-icon img{
+        width:22px;
+        height:22px;
+    }
+
+    .menu-text{
+        font-size:10px;
+    }
+}
