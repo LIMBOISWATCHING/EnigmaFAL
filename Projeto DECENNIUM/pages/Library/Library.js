@@ -60,8 +60,10 @@ class Library {
         this.byId("library-back-page")?.addEventListener("click", () => this.backPage());
         this.byId("library-return-shelves")?.addEventListener("click", () => this.closeReader());
         this.byId("library-selection-font")?.addEventListener("mousedown", () => this.saveEditorSelection());
+        this.byId("library-selection-size")?.addEventListener("mousedown", () => this.saveEditorSelection());
         this.byId("library-apply-color")?.addEventListener("click", () => this.applyTextColor());
         this.byId("library-selection-font")?.addEventListener("change", event => this.applySelectionFont(event.target.value));
+        this.byId("library-selection-size")?.addEventListener("change", event => this.applySelectionSize(event.target.value));
         this.container.querySelectorAll(".library-format-btn").forEach(button => {
             button.addEventListener("mousedown", event => event.preventDefault());
             button.addEventListener("click", () => this.applyFormat(button));
@@ -319,6 +321,7 @@ class Library {
         [
             "library-text-color",
             "library-selection-font",
+            "library-selection-size",
             "library-apply-color",
             ...Array.from(this.container.querySelectorAll(".library-format-btn")),
             "library-highlight-words",
@@ -1053,6 +1056,36 @@ class Library {
 
         this.byId("library-selection-font").value = "";
         this.dirty = true;
+
+    }
+
+    applySelectionSize(size) {
+
+        if (!size) return;
+
+        this.restoreEditorSelection();
+        this.wrapSelectionWithStyle({ fontSize: size });
+        this.byId("library-selection-size").value = "";
+        this.dirty = true;
+
+    }
+
+    wrapSelectionWithStyle(styles = {}) {
+
+        const editor = this.byId("library-editor");
+        const selection = window.getSelection?.();
+
+        if (selection && selection.rangeCount && !selection.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            if (!editor || !editor.contains(range.commonAncestorContainer)) return;
+            const span = document.createElement("span");
+            Object.assign(span.style, styles);
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+            selection.removeAllRanges();
+            selection.selectAllChildren(span);
+            this.savedSelection = selection.getRangeAt(0).cloneRange();
+        }
 
     }
 
