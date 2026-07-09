@@ -454,17 +454,25 @@ class Library {
         if (!canvas || !canDraw) return;
 
         canvas.addEventListener("pointerdown", event => {
+            if (!this.drawingMode) return;
+            event.preventDefault();
+            canvas.setPointerCapture?.(event.pointerId);
+
             if (this.eraserMode) {
                 this.erasing = true;
                 this.eraseLineAt(canvas, event, page);
                 return;
             }
+
             this.drawing = true;
             this.currentLine = { type: "line", color: this.byId("library-text-color")?.value || "#000", size: 3, points: [] };
             this.addLinePoint(canvas, event);
         });
 
         canvas.addEventListener("pointermove", event => {
+            if (!this.drawingMode) return;
+            event.preventDefault();
+
             if (this.erasing) {
                 this.eraseLineAt(canvas, event, page);
                 return;
@@ -474,7 +482,9 @@ class Library {
             this.drawExistingLines({ drawings: [...(page.drawings || []), this.currentLine] });
         });
 
-        canvas.addEventListener("pointerup", () => {
+        const finish = event => {
+            canvas.releasePointerCapture?.(event.pointerId);
+
             if (this.erasing) {
                 this.erasing = false;
                 this.dirty = true;
@@ -487,6 +497,13 @@ class Library {
             this.drawing = false;
             this.dirty = true;
             this.saveDrawings(page);
+        };
+
+        canvas.addEventListener("pointerup", finish);
+        canvas.addEventListener("pointercancel", finish);
+        canvas.addEventListener("lostpointercapture", () => {
+            this.erasing = false;
+            this.drawing = false;
         });
 
     }
