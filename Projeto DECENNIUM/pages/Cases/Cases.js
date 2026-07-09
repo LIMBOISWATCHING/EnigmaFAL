@@ -81,6 +81,7 @@ class Cases {
         this.byId("case-add-page")?.addEventListener("click", () => this.addPage());
         this.byId("case-add-audio")?.addEventListener("click", () => this.addAudio());
         this.byId("case-add-dossier")?.addEventListener("click", () => this.addDossier());
+        this.byId("case-board-quick-note")?.addEventListener("click", () => this.addQuickBoardNote());
         this.byId("case-board-add-line")?.addEventListener("click", () => {
             this.addLineMode = !this.addLineMode;
             this.pendingLinkId = null;
@@ -440,6 +441,31 @@ class Cases {
         });
         this.clear(["case-note-title", "case-note-text"]);
         this.saveAndRender();
+    }
+
+    async addQuickBoardNote() {
+        if (!this.current) return;
+
+        const data = await this.openArchiveForm({
+            heading: "Nova nota do quadro",
+            fields: [
+                { key: "title", label: "Titulo", value: "Nota", multiline: false },
+                { key: "text", label: "Texto da nota", value: "", multiline: true }
+            ]
+        });
+
+        if (!data || !String(data.text || "").trim()) return;
+
+        const note = {
+            id: this.localId("NOTE"),
+            title: String(data.title || "").trim() || "Nota",
+            text: String(data.text || "").trim(),
+            ownerId: MC.Services.Cases.currentUserId(),
+            createdAt: new Date().toISOString()
+        };
+
+        this.current.notes.push(note);
+        this.linkArchiveToBoard("note", note.id);
     }
 
     addPage() {
@@ -932,6 +958,8 @@ class Cases {
             const midY = (from.y + to.y) / 2;
             const angle = this.lineLabelAngle(from, to);
             const label = String(link.label || "").trim();
+            const labelWidth = this.lineLabelWidth(label);
+            const labelTextWidth = Math.max(120, labelWidth - 28);
             const color = this.esc(link.color || "#a30e0e");
             return `
                 <g class="case-board-line-group" data-id="${this.esc(link.id)}">
@@ -940,8 +968,8 @@ class Cases {
                     <g class="case-board-line-ui" transform="translate(${midX} ${midY}) rotate(${angle})">
                         <rect class="case-board-line-ui-hit" x="-104" y="-42" width="208" height="78"></rect>
                         ${label ? `<g class="case-board-line-label" transform="translate(0 -24)">
-                            <rect x="-90" y="-15" width="180" height="30"></rect>
-                            <text text-anchor="middle" dominant-baseline="middle">${this.esc(label)}</text>
+                            <rect x="${-labelWidth / 2}" y="-17" width="${labelWidth}" height="34"></rect>
+                            <text text-anchor="middle" dominant-baseline="middle" textLength="${labelTextWidth}" lengthAdjust="spacingAndGlyphs">${this.esc(label)}</text>
                         </g>` : ""}
                         <g class="case-board-line-palette" transform="translate(-70 16)">
                             ${this.lineColors().map((entry, index) => `<circle class="case-board-line-color" data-color="${entry}" cx="${index * 28}" cy="0" r="8" style="fill:${entry}"></circle>`).join("")}
@@ -950,6 +978,10 @@ class Cases {
                 </g>`;
         }).join("");
         this.bindBoardLineEvents(svg);
+    }
+
+    lineLabelWidth(label = "") {
+        return this.clamp(String(label || "").length * 13 + 42, 180, 520);
     }
 
     bindBoardLineEvents(svg) {
