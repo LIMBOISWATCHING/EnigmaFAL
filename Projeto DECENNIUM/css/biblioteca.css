@@ -515,22 +515,32 @@
 .library-image-layer,
 .library-note-layer{
     position:absolute;
-    inset:54px 70px;
-    width:calc(100% - 140px);
-    height:calc(100% - 108px);
+    inset:0;
+    width:100%;
+    height:100%;
 }
 
 .library-drawing-canvas{
     z-index:7;
     pointer-events:none;
+    touch-action:none;
 }
 
 .library-paper.drawing-mode .library-drawing-canvas{
+    z-index:12;
     pointer-events:auto;
     cursor:crosshair;
 }
 
 .library-paper.drawing-mode .book-page-editor{
+    pointer-events:none;
+}
+
+.library-paper.drawing-mode .library-written-page-title,
+.library-paper.drawing-mode .library-page-number,
+.library-paper.drawing-mode .library-page-refs,
+.library-paper.drawing-mode .library-image-layer,
+.library-paper.drawing-mode .library-note-layer{
     pointer-events:none;
 }
 
