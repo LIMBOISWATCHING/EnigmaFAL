@@ -1,0 +1,722 @@
+<!-- ======================================================
+     PERSONAGENS — Lista + Ficha
+====================================================== -->
+
+<div class="chars-page">
+
+    <!-- ==================================================
+         HEADER
+    ================================================== -->
+
+    <header class="chars-header">
+
+        <div>
+
+            <h1>PERSONAGENS</h1>
+
+            <p class="chars-subtitle">
+
+                Fichas de investigadores e aliados
+
+            </p>
+
+        </div>
+
+        <button
+            id="chars-btn-new"
+            class="chars-btn-primary"
+            type="button">
+
+            + Nova Ficha
+
+        </button>
+
+    </header>
+
+    <!-- ==================================================
+         LISTA DE PERSONAGENS
+    ================================================== -->
+
+    <section id="chars-list-view">
+
+        <div id="chars-grid" class="chars-grid">
+
+            <p class="chars-empty">Carregando personagens...</p>
+
+        </div>
+
+    </section>
+
+    <!-- ==================================================
+         FICHA DO PERSONAGEM (escondida por padrão)
+    ================================================== -->
+
+    <section id="chars-sheet-view" class="chars-sheet" style="display:none;">
+
+        <div class="chars-sheet-toolbar">
+
+            <button
+                id="chars-btn-back"
+                class="chars-btn-secondary"
+                type="button">
+
+                ← Voltar
+
+            </button>
+
+            <div class="chars-sheet-actions">
+
+                <button
+                    id="chars-btn-delete"
+                    class="chars-btn-danger"
+                    type="button">
+
+                    Excluir
+
+                </button>
+
+                <button
+                    id="chars-btn-save"
+                    class="chars-btn-primary"
+                    type="button">
+
+                    Salvar
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- FOTO + INFO BÁSICA -->
+
+        <div class="chars-sheet-top">
+
+            <div class="chars-photo-section">
+
+                <div id="chars-photo-preview" class="chars-photo-preview">
+
+                    <span class="chars-photo-placeholder">?</span>
+
+                </div>
+
+                <label class="chars-field-label">URL da foto</label>
+
+                <input
+                    id="chars-photo-url"
+                    class="chars-input"
+                    type="text"
+                    placeholder="https://...">
+
+            </div>
+
+            <div class="chars-basic-info">
+
+                <div class="chars-field-row">
+
+                    <div class="chars-field">
+
+                        <label class="chars-field-label">Nome</label>
+
+                        <input
+                            id="chars-name"
+                            class="chars-input"
+                            type="text"
+                            placeholder="Nome do personagem">
+
+                    </div>
+
+                    <div class="chars-field chars-field-small">
+
+                        <label class="chars-field-label">Idade</label>
+
+                        <input
+                            id="chars-age"
+                            class="chars-input"
+                            type="number"
+                            min="0"
+                            placeholder="0">
+
+                    </div>
+
+                </div>
+
+                <div class="chars-field-row">
+
+                    <div class="chars-field">
+
+                        <label class="chars-field-label">Tipo de personagem</label>
+
+                        <input
+                            id="chars-type"
+                            class="chars-input"
+                            type="text"
+                            placeholder="Investigador, Criatura, NPC...">
+
+                    </div>
+
+                </div>
+
+                <div class="chars-field">
+
+                    <label class="chars-field-label">Frase que resume o personagem</label>
+
+                    <input
+                        id="chars-summary-phrase"
+                        class="chars-input"
+                        type="text"
+                        placeholder="Uma frase curta sobre quem ele e...">
+
+                </div>
+
+                <div class="chars-field">
+
+                    <label class="chars-field-label">Descricao</label>
+
+                    <textarea
+                        id="chars-desc"
+                        class="chars-textarea"
+                        rows="3"
+                        placeholder="Descricao do personagem..."></textarea>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- BARRAS: VIDA E ENERGIA -->
+
+        <div class="chars-bars-section">
+
+            <div class="chars-bar-block">
+
+                <div class="chars-bar-header">
+
+                    <span class="chars-bar-title">Feridas (Vida)</span>
+
+                    <span class="chars-bar-values">
+
+                        <input
+                            id="chars-hp-current"
+                            class="chars-bar-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                        <span class="chars-bar-sep">/</span>
+
+                        <input
+                            id="chars-hp-max"
+                            class="chars-bar-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                    </span>
+
+                </div>
+
+                <div class="chars-bar-track">
+
+                    <div
+                        id="chars-hp-fill"
+                        class="chars-bar-fill chars-bar-hp"
+                        style="width:0%"></div>
+
+                </div>
+
+            </div>
+
+            <div class="chars-bar-block">
+
+                <div class="chars-bar-header">
+
+                    <span class="chars-bar-title">Energia</span>
+
+                    <span class="chars-bar-values">
+
+                        <input
+                            id="chars-en-current"
+                            class="chars-bar-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                        <span class="chars-bar-sep">/</span>
+
+                        <input
+                            id="chars-en-max"
+                            class="chars-bar-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                    </span>
+
+                </div>
+
+                <div class="chars-bar-track">
+
+                    <div
+                        id="chars-en-fill"
+                        class="chars-bar-fill chars-bar-en"
+                        style="width:0%"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ATRIBUTOS + LIMITES -->
+
+        <div class="chars-attrs-section">
+
+            <div class="chars-attrs-grid">
+
+                <!-- VONTADE -->
+
+                <div class="chars-attr-card">
+
+                    <div class="chars-attr-limit-row">
+
+                        <span class="chars-attr-limit-label">LIM</span>
+
+                        <input
+                            id="chars-will-limit"
+                            class="chars-input chars-attr-limit-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                    </div>
+
+                    <span class="chars-attr-name">Vontade</span>
+
+                    <input
+                        id="chars-will-base"
+                        class="chars-input chars-attr-value"
+                        type="number"
+                        min="0"
+                        value="0">
+
+                </div>
+
+                <!-- AGILIDADE -->
+
+                <div class="chars-attr-card">
+
+                    <div class="chars-attr-limit-row">
+
+                        <span class="chars-attr-limit-label">LIM</span>
+
+                        <input
+                            id="chars-agi-limit"
+                            class="chars-input chars-attr-limit-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                    </div>
+
+                    <span class="chars-attr-name">Agilidade</span>
+
+                    <input
+                        id="chars-agi-base"
+                        class="chars-input chars-attr-value"
+                        type="number"
+                        min="0"
+                        value="0">
+
+                </div>
+
+                <!-- INTELECTO -->
+
+                <div class="chars-attr-card">
+
+                    <div class="chars-attr-limit-row">
+
+                        <span class="chars-attr-limit-label">LIM</span>
+
+                        <input
+                            id="chars-int-limit"
+                            class="chars-input chars-attr-limit-input"
+                            type="number"
+                            min="0"
+                            value="0">
+
+                    </div>
+
+                    <span class="chars-attr-name">Intelecto</span>
+
+                    <input
+                        id="chars-int-base"
+                        class="chars-input chars-attr-value"
+                        type="number"
+                        min="0"
+                        value="0">
+
+                </div>
+
+                <!-- LIMITE DE ESFORCO -->
+
+                <div class="chars-attr-card chars-attr-card-effort">
+
+                    <span class="chars-attr-name">Limite de Esforco</span>
+
+                    <input
+                        id="chars-effort-base"
+                        class="chars-input chars-attr-value"
+                        type="number"
+                        min="0"
+                        value="0">
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ATAQUES E HABILIDADES VINCULADOS -->
+
+        <div class="chars-attacks-section">
+
+            <h3 class="chars-section-title">Ataques e Habilidades</h3>
+
+            <div class="chars-attacks-toolbar">
+
+                <input
+                    id="chars-attack-link-input"
+                    class="chars-input"
+                    type="text"
+                    placeholder="Cole o ID do ataque ou habilidade...">
+
+                <button
+                    id="chars-btn-link-attack"
+                    class="chars-btn-secondary"
+                    type="button">
+
+                    Vincular
+
+                </button>
+
+            </div>
+
+            <div id="chars-attacks-list" class="chars-attacks-list">
+
+                <p class="chars-empty-small">Nenhum ataque vinculado.</p>
+
+            </div>
+
+        </div>
+
+        <div class="chars-traits-section">
+
+            <h3 class="chars-section-title">Caracteristicas</h3>
+
+            <div class="chars-traits-grid">
+
+                <div class="chars-trait-column">
+                    <h4>Boas</h4>
+                    <button id="chars-btn-show-good-trait" class="chars-btn-secondary chars-btn-create-trait" type="button">Criar</button>
+                    <div id="chars-good-trait-form" class="chars-trait-form" style="display:none;">
+                        <input id="chars-good-trait-name" class="chars-input" type="text" placeholder="Nome">
+                        <textarea id="chars-good-trait-desc" class="chars-textarea" rows="2" placeholder="Descricao"></textarea>
+                        <button id="chars-btn-add-good-trait" class="chars-btn-secondary" type="button">Adicionar</button>
+                    </div>
+                    <div id="chars-good-traits-list" class="chars-traits-list"></div>
+                </div>
+
+                <div class="chars-trait-column">
+                    <h4>Ruins</h4>
+                    <button id="chars-btn-show-bad-trait" class="chars-btn-secondary chars-btn-create-trait" type="button">Criar</button>
+                    <div id="chars-bad-trait-form" class="chars-trait-form" style="display:none;">
+                        <input id="chars-bad-trait-name" class="chars-input" type="text" placeholder="Nome">
+                        <textarea id="chars-bad-trait-desc" class="chars-textarea" rows="2" placeholder="Descricao"></textarea>
+                        <button id="chars-btn-add-bad-trait" class="chars-btn-secondary" type="button">Adicionar</button>
+                    </div>
+                    <div id="chars-bad-traits-list" class="chars-traits-list"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- INVENTARIO -->
+
+        <div class="chars-inventory-section">
+
+            <div class="chars-inventory-header">
+
+                <h3 class="chars-section-title">Inventario</h3>
+
+                <div class="chars-inventory-tools">
+
+                    <input
+                        id="chars-inventory-search"
+                        class="chars-input"
+                        type="text"
+                        placeholder="Buscar item por nome...">
+
+                    <button
+                        id="chars-btn-toggle-inventory"
+                        class="chars-btn-secondary"
+                        type="button">
+
+                        Fechar
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div id="chars-inventory-body">
+
+            <div class="chars-inventory-import">
+
+                <input
+                    id="chars-basic-item-id"
+                    class="chars-input"
+                    type="text"
+                    placeholder="ID do item basico...">
+
+                <button
+                    id="chars-btn-add-basic-item"
+                    class="chars-btn-secondary"
+                    type="button">
+
+                    Adicionar por ID
+
+                </button>
+
+            </div>
+
+            <div class="chars-inventory-form">
+
+                <input id="chars-item-name" class="chars-input" type="text" placeholder="Nome do item">
+                <input id="chars-item-category" class="chars-input" type="text" placeholder="Categoria">
+                <input id="chars-item-photo" class="chars-input" type="text" placeholder="Foto do item (URL)">
+                <input id="chars-item-attack" class="chars-input" type="text" placeholder="ID de ataque atribuido">
+                <textarea id="chars-item-desc" class="chars-textarea" rows="2" placeholder="Descricao do item"></textarea>
+
+                <button id="chars-btn-add-item" class="chars-btn-secondary" type="button">
+
+                    Adicionar Item
+
+                </button>
+
+            </div>
+
+            <div id="chars-inventory-list" class="chars-inventory-list">
+
+                <p class="chars-empty-small">Nenhum item no inventario.</p>
+
+            </div>
+
+            </div>
+
+        </div>
+
+        <!-- COISAS SOFRIDAS (dano por codigo OU numero direto) -->
+
+        <div class="chars-suffered-section">
+
+            <h3 class="chars-section-title">Coisas Sofridas</h3>
+
+            <!-- Dano por codigo de ataque -->
+
+            <div class="chars-suffered-toolbar">
+
+                <input
+                    id="chars-suffer-code-input"
+                    class="chars-input"
+                    type="text"
+                    placeholder="Codigo do ataque (ID)...">
+
+                <button
+                    id="chars-btn-apply-damage"
+                    class="chars-btn-danger"
+                    type="button">
+
+                    Aplicar por Codigo
+
+                </button>
+
+            </div>
+
+            <div class="chars-suffered-toolbar">
+
+                <input
+                    id="chars-effect-link-input"
+                    class="chars-input"
+                    type="text"
+                    placeholder="ID do efeito (da pagina Ataques)...">
+
+                <button
+                    id="chars-btn-apply-effect"
+                    class="chars-btn-secondary"
+                    type="button">
+
+                    Aplicar Efeito
+
+                </button>
+
+            </div>
+
+            <!-- Dano direto por numero -->
+
+            <div class="chars-suffered-toolbar">
+
+                <input
+                    id="chars-direct-dmg-input"
+                    class="chars-input"
+                    type="number"
+                    min="0"
+                    placeholder="Dano direto (numero)...">
+
+                <button
+                    id="chars-btn-direct-damage"
+                    class="chars-btn-danger"
+                    type="button">
+
+                    Aplicar Dano Direto
+
+                </button>
+
+            </div>
+
+            <div class="chars-suffered-toolbar">
+
+                <input
+                    id="chars-effort-use"
+                    class="chars-input"
+                    type="number"
+                    min="1"
+                    value="1"
+                    placeholder="Esforco">
+
+                <select id="chars-effort-stat" class="chars-input">
+                    <option value="will">Vontade</option>
+                    <option value="agility">Agilidade</option>
+                    <option value="intellect">Intelecto</option>
+                </select>
+
+                <button
+                    id="chars-btn-use-effort"
+                    class="chars-btn-secondary"
+                    type="button">
+
+                    Usar Esforco
+
+                </button>
+
+                <button
+                    id="chars-btn-clear-effort"
+                    class="chars-btn-secondary"
+                    type="button">
+
+                    Remover Esforco
+
+                </button>
+
+                <span id="chars-effort-status" class="chars-effort-status">
+
+                    Esforco 0/0
+
+                </span>
+
+            </div>
+
+            <div id="chars-suffer-log" class="chars-suffer-log">
+
+                <p class="chars-empty-small">Nenhum dano registrado.</p>
+
+            </div>
+
+        </div>
+
+        <!-- EFEITOS ATIVOS -->
+
+        <div class="chars-effects-section">
+
+            <h3 class="chars-section-title">Efeitos Ativos</h3>
+
+            <div id="chars-active-effects" class="chars-effects-list">
+
+                <p class="chars-empty-small">Nenhum efeito ativo.</p>
+
+            </div>
+
+            <div class="chars-turn-counter">
+
+                <span>Turno</span>
+
+                <strong id="chars-turn-number">1</strong>
+
+            </div>
+
+            <!-- BOTAO PASSAR TURNO -->
+
+            <button
+                id="chars-btn-pass-turn"
+                class="chars-btn-turn"
+                type="button">
+
+                Passar Turno (-1 contador)
+
+            </button>
+
+            <button
+                id="chars-btn-reset-turn"
+                class="chars-btn-turn"
+                type="button">
+
+                Reiniciar Turnos
+
+            </button>
+
+        </div>
+
+    </section>
+
+    <div id="chars-turn-summary-modal" class="chars-modal-overlay" style="display:none;">
+
+        <div class="chars-modal-box chars-turn-summary-box">
+
+            <h3>Resumo do Turno</h3>
+
+            <div id="chars-turn-summary-content" class="chars-turn-summary-content"></div>
+
+            <div class="chars-modal-actions">
+
+                <button id="chars-turn-summary-close" class="chars-btn-secondary" type="button">Fechar</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- MODAL DE CONFIRMACAO -->
+
+    <div id="chars-confirm-modal" class="chars-modal-overlay" style="display:none;">
+
+        <div class="chars-modal-box">
+
+            <p id="chars-confirm-message" class="chars-modal-msg"></p>
+
+            <div class="chars-modal-actions">
+
+                <button id="chars-confirm-cancel" class="chars-btn-secondary" type="button">Cancelar</button>
+
+                <button id="chars-confirm-ok" class="chars-btn-danger" type="button">Confirmar</button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,55 @@
+<div class="cases-page personal-board-page">
+    <header class="cases-header">
+        <div>
+            <h1>QUADRO INVESTIGATIVO</h1>
+            <p class="cases-subtitle">Arquivo pessoal de conexoes</p>
+        </div>
+    </header>
+
+    <section id="personal-board-area" class="case-board-area personal-board-shell">
+        <div class="case-board-tools">
+            <label id="personal-board-admin-wrap" class="case-admin-board-switch case-hidden">
+                <span>Quadro de</span>
+                <select id="personal-board-admin-user" class="case-input"></select>
+            </label>
+            <button id="personal-board-add-note" class="case-btn" type="button">Nota</button>
+            <button id="personal-board-add-page" class="case-btn" type="button">Pagina</button>
+            <button id="personal-board-add-dossier" class="case-btn" type="button">Ficha</button>
+            <button id="personal-board-add-photo" class="case-btn" type="button">Foto</button>
+            <button id="personal-board-add-audio" class="case-btn" type="button">Audio</button>
+            <button id="personal-board-add-case" class="case-btn" type="button">Link Caso</button>
+            <button id="personal-board-add-book" class="case-btn" type="button">Link Livro</button>
+            <select id="personal-board-line-color" class="case-input case-line-color">
+                <option value="#a30e0e">Linha vermelha</option>
+                <option value="#16d96d">Linha verde</option>
+                <option value="#d9c74a">Linha amarela</option>
+                <option value="#5aa7ff">Linha azul</option>
+                <option value="#e86cff">Linha violeta</option>
+            </select>
+            <button id="personal-board-add-line" class="case-btn" type="button">Adicionar linhas</button>
+            <button id="personal-board-delete-line" class="case-btn" type="button">Remover linha</button>
+            <button id="personal-board-fullscreen" class="case-btn" type="button">Tela cheia</button>
+        </div>
+
+        <div id="personal-board" class="case-board">
+            <div class="case-board-zoom-panel">
+                <button id="personal-board-zoom-toggle" type="button">LUPA</button>
+                <div id="personal-board-zoom-controls" class="case-board-zoom-controls case-hidden">
+                    <input id="personal-board-zoom" type="range" min="3" max="600" value="65">
+                    <span id="personal-board-zoom-label">65%</span>
+                </div>
+            </div>
+            <div id="personal-board-viewport" class="case-board-viewport">
+                <div id="personal-board-world" class="case-board-world">
+                    <svg id="personal-board-lines" class="case-board-lines"></svg>
+                    <div id="personal-board-items" class="case-board-items"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="personal-board-zoom-overlay" class="case-zoom case-hidden">
+        <button id="personal-board-zoom-close" type="button">FECHAR</button>
+        <div id="personal-board-zoom-content" class="case-zoom-content"></div>
+    </div>
+</div>

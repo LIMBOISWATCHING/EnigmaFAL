@@ -1,0 +1,84 @@
+<div class="basic-page">
+
+    <header class="basic-header">
+        <div>
+            <h1>ITENS BASICOS</h1>
+            <p class="basic-subtitle">Catalogo publico de recursos comuns</p>
+        </div>
+    </header>
+
+    <section class="basic-section">
+
+        <div class="basic-section-header">
+            <h2 class="basic-section-title">Itens Publicos</h2>
+            <input
+                id="basic-item-search"
+                class="basic-input basic-search"
+                type="text"
+                placeholder="Buscar item por nome...">
+        </div>
+
+        <div class="basic-form">
+            <input id="basic-item-name" class="basic-input" type="text" placeholder="Nome do item">
+            <input id="basic-item-category" class="basic-input" type="text" placeholder="Categoria">
+            <input id="basic-item-photo" class="basic-input" type="text" placeholder="Foto do item (URL)">
+            <input id="basic-item-attack" class="basic-input" type="text" placeholder="ID de ataque atribuido">
+            <textarea id="basic-item-desc" class="basic-textarea" rows="2" placeholder="Descricao do item"></textarea>
+            <button id="basic-btn-create-item" class="basic-btn-primary" type="button">Criar Item</button>
+        </div>
+
+        <div id="basic-items-list" class="basic-grid">
+            <p class="basic-empty">Carregando itens...</p>
+        </div>
+
+    </section>
+
+    <section class="basic-section vault-section">
+
+        <div class="basic-section-header">
+            <div>
+                <h2 class="basic-section-title">Cofres</h2>
+                <p class="basic-section-note">Todos veem os cofres. Apenas quem criou ve a senha.</p>
+            </div>
+            <input
+                id="vault-search"
+                class="basic-input basic-search"
+                type="text"
+                placeholder="Buscar por cofre, serie ou criador...">
+        </div>
+
+        <div class="vault-stage">
+            <pre class="vault-art">
+      ____________________________
+     / __________________________ \
+    / /                          \ \
+   | |     __________________     | |
+   | |    |  ______________  |    | |
+   | |    | |              | |    | |
+   | |    | |   [  00  ]   | |    | |
+   | |    | |      ()      | |    | |
+   | |    | |______________| |    | |
+   | |    |  ______________  |    | |
+   | |    | |  1  2  3  4 | |    | |
+   | |    | |  5  6  7  8 | |    | |
+   | |    | |______________| |    | |
+   | |    |__________________|    | |
+    \ \__________________________/ /
+     \____________________________/
+            </pre>
+        </div>
+
+        <div class="basic-form vault-form">
+            <input id="vault-name" class="basic-input" type="text" placeholder="Nome do cofre">
+            <input id="vault-password" class="basic-input" type="text" placeholder="Codigo de senha">
+            <textarea id="vault-desc" class="basic-textarea" rows="2" placeholder="Descricao do cofre"></textarea>
+            <button id="basic-btn-create-vault" class="basic-btn-primary" type="button">Criar Cofre</button>
+        </div>
+
+        <div id="vaults-list" class="vault-list">
+            <p class="basic-empty">Carregando cofres...</p>
+        </div>
+
+    </section>
+
+</div>

@@ -1,0 +1,476 @@
+/* ======================================================
+   ATAQUES & EFEITOS
+   Terminal aesthetic: Consolas, preto puro, sem glow.
+====================================================== */
+
+.atk-page {
+    width: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 40px 48px 60px;
+    font-family: Consolas, "Courier New", monospace;
+    color: #bbb;
+}
+
+/* HEADER */
+
+.atk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #1a1a1a;
+    padding-bottom: 20px;
+}
+
+.atk-header h1 {
+    margin: 0;
+    color: #c8c8c8;
+    font-size: 22px;
+    letter-spacing: 6px;
+    font-weight: 400;
+}
+
+.atk-subtitle {
+    margin-top: 6px;
+    color: #555;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+/* TABS */
+
+.atk-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.atk-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: #555;
+    padding: 10px 20px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.atk-tab:hover {
+    color: #888;
+}
+
+.atk-tab.active {
+    color: #ccc;
+    border-bottom-color: #555;
+}
+
+/* SECTIONS */
+
+.atk-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.atk-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.atk-section-title {
+    margin: 0;
+    color: #666;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: normal;
+}
+
+/* BUTTONS */
+
+.atk-btn-primary {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    color: #ccc;
+    padding: 8px 18px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.atk-btn-primary:hover {
+    background: #222;
+    border-color: #555;
+}
+
+.atk-btn-secondary {
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    color: #888;
+    padding: 8px 16px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.atk-btn-secondary:hover {
+    border-color: #444;
+    color: #bbb;
+}
+
+/* CARDS */
+
+.atk-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.atk-card {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.atk-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.atk-card-name {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: normal;
+    letter-spacing: 1px;
+}
+
+.atk-card-id {
+    color: #444;
+    font-size: 10px;
+    font-family: Consolas, "Courier New", monospace;
+    letter-spacing: 1px;
+}
+
+.atk-card-desc {
+    color: #666;
+    font-size: 12px;
+}
+
+.atk-card-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.atk-card-stat {
+    color: #555;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.atk-card-effects {
+    color: #556;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.atk-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.atk-btn-delete-attack,
+.atk-btn-delete-effect,
+.atk-btn-delete-ability {
+    background: transparent;
+    border: 1px solid #3a1111;
+    color: #aa4444;
+    padding: 4px 12px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.atk-btn-edit-attack,
+.atk-btn-edit-effect,
+.atk-btn-edit-ability {
+    background: transparent;
+    border: 1px solid #243a24;
+    color: #77aa77;
+    padding: 4px 12px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.atk-btn-edit-attack:hover,
+.atk-btn-edit-effect:hover,
+.atk-btn-edit-ability:hover {
+    background: #071807;
+}
+
+.atk-btn-delete-attack:hover,
+.atk-btn-delete-effect:hover,
+.atk-btn-delete-ability:hover {
+    background: #220000;
+}
+
+.atk-empty {
+    color: #444;
+    font-size: 13px;
+    letter-spacing: 1px;
+    padding: 10px 0;
+}
+
+.atk-empty-small {
+    color: #333;
+    font-size: 12px;
+    padding: 6px 0;
+}
+
+/* FORMS */
+
+.atk-form {
+    background: #060606;
+    border: 1px solid #1a1a1a;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 8px;
+}
+
+.atk-form-title {
+    color: #888;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.atk-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.atk-field-small {
+    max-width: 100px;
+}
+
+.atk-field-row {
+    display: flex;
+    gap: 14px;
+}
+
+.atk-label {
+    color: #555;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.atk-input {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    color: #ccc;
+    padding: 8px 10px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.atk-input:focus {
+    border-color: #333;
+}
+
+.atk-textarea {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    color: #ccc;
+    padding: 8px 10px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.atk-textarea:focus {
+    border-color: #333;
+}
+
+/* EFFECT LINK (inside attack form) */
+
+.atk-form-effects {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.atk-form-effects-title {
+    color: #555;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.atk-effect-link-row {
+    display: flex;
+    gap: 10px;
+}
+
+.atk-effect-link-row .atk-input {
+    flex: 1;
+}
+
+.atk-effects-mini-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.atk-effect-mini-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111;
+    border: 1px solid #1a1a1a;
+    padding: 6px 10px;
+}
+
+.atk-effect-mini-id {
+    color: #aaa;
+    font-size: 11px;
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.atk-btn-remove-pending {
+    background: transparent;
+    border: none;
+    color: #553333;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+.atk-btn-remove-pending:hover {
+    color: #aa4444;
+}
+
+/* TICK SECTION */
+
+.atk-form-tick {
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.atk-form-tick-title {
+    color: #555;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* FORM ACTIONS */
+
+.atk-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+/* MODAL DE CONFIRMACAO */
+
+.atk-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.atk-modal-box {
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    padding: 28px 32px;
+    max-width: 360px;
+    width: 90%;
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.atk-modal-msg {
+    color: #bbb;
+    font-size: 14px;
+    margin: 0 0 24px;
+    line-height: 1.5;
+}
+
+.atk-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+    .atk-page {
+        padding: 24px 18px 36px;
+    }
+
+    .atk-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .atk-field-row {
+        flex-direction: column;
+    }
+
+    .atk-field-small {
+        max-width: 100%;
+    }
+
+    .atk-card-stats {
+        flex-direction: column;
+        gap: 4px;
+    }
+}

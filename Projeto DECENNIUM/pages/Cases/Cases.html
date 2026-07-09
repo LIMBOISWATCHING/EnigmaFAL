@@ -1,0 +1,178 @@
+<div class="cases-page">
+
+    <header class="cases-header">
+        <div>
+            <h1>ARQUIVOS DE CASOS</h1>
+            <p class="cases-subtitle">Investigacoes, evidencias e quadro de conexoes</p>
+        </div>
+        <button id="case-back-list" class="case-btn case-hidden" type="button">Voltar aos arquivos</button>
+    </header>
+
+    <section id="cases-list-view" class="cases-list-view">
+        <div class="cases-toolbar">
+            <input id="case-search" class="case-input" type="text" placeholder="Buscar caso por nome...">
+            <button id="case-new-toggle" class="case-btn-primary" type="button">Novo Caso</button>
+        </div>
+
+        <form id="case-create-form" class="case-create-form case-hidden">
+            <label class="case-field wide">
+                <span>Nome do caso</span>
+                <input id="case-name" class="case-input" type="text" placeholder="Ex: Teste-01">
+            </label>
+            <label class="case-field">
+                <span>Local</span>
+                <input id="case-location" class="case-input" type="text" placeholder="Cidade, predio, limbo...">
+            </label>
+            <label class="case-field">
+                <span>Objetivo</span>
+                <input id="case-objective" class="case-input" type="text" placeholder="O que precisa ser achado">
+            </label>
+            <label class="case-field">
+                <span>Status inicial</span>
+                <select id="case-status" class="case-input">
+                    <option value="not_started">Nao iniciado</option>
+                    <option value="in_progress">Em andamento</option>
+                    <option value="complete">Completo</option>
+                </select>
+            </label>
+            <label class="case-field">
+                <span>Senha opcional</span>
+                <input id="case-password" class="case-input" type="text" placeholder="Deixe vazio para publico">
+            </label>
+            <label class="case-field">
+                <span>Titulo da foto principal</span>
+                <input id="case-initial-photo-title" class="case-input" type="text" placeholder="Ex: Evidencia inicial">
+            </label>
+            <label class="case-field wide">
+                <span>URL da foto principal</span>
+                <input id="case-initial-photo-url" class="case-input" type="text" placeholder="https://...">
+            </label>
+            <label class="case-field full">
+                <span>Descricao extra</span>
+                <textarea id="case-description" class="case-textarea" rows="4" placeholder="Resumo, suspeitas, anomalias e observacoes iniciais"></textarea>
+            </label>
+            <button id="case-create-btn" class="case-btn-primary" type="button">Criar Arquivo</button>
+        </form>
+
+        <div id="cases-grid" class="cases-grid">
+            <p class="case-empty">Carregando casos...</p>
+        </div>
+    </section>
+
+    <section id="case-workspace" class="case-workspace case-hidden">
+        <div class="case-file-head">
+            <div id="case-main-photo" class="case-main-photo"></div>
+            <div>
+                <span id="case-file-code" class="case-file-code">CAS0000</span>
+                <h2 id="case-file-title">Caso</h2>
+                <p id="case-file-meta">---</p>
+                <div id="case-header-photos" class="case-header-photos"></div>
+            </div>
+            <div class="case-file-actions">
+                <select id="case-file-status" class="case-input">
+                    <option value="not_started">Nao iniciado</option>
+                    <option value="in_progress">Em andamento</option>
+                    <option value="complete">Completo</option>
+                </select>
+                <button id="case-save-main" class="case-btn-primary" type="button">Salvar</button>
+                <button id="case-archive-main" class="case-btn case-danger" type="button">Arquivar caso</button>
+            </div>
+        </div>
+
+        <div class="case-file-layout">
+            <section class="case-block case-info-block">
+                <h3>Informacoes do arquivo</h3>
+                <input id="case-edit-name" class="case-input" type="text" placeholder="Nome">
+                <input id="case-edit-location" class="case-input" type="text" placeholder="Local">
+                <input id="case-edit-objective" class="case-input" type="text" placeholder="Objetivo">
+                <input id="case-edit-password" class="case-input" type="text" placeholder="Senha opcional">
+                <textarea id="case-edit-description" class="case-textarea" rows="4" placeholder="Descricao extra"></textarea>
+            </section>
+
+            <section class="case-block case-photo-block">
+                <h3>Fotos importantes do caso</h3>
+                <button id="case-photo-toggle" class="case-btn" type="button">Adicionar foto</button>
+                <div id="case-photo-form" class="case-photo-add-form case-hidden">
+                    <input id="case-photo-title" class="case-input" type="text" placeholder="Titulo da foto">
+                    <input id="case-photo-url" class="case-input" type="text" placeholder="URL da foto">
+                    <button id="case-add-photo" class="case-btn" type="button">Salvar foto</button>
+                </div>
+                <div id="case-photos-list" class="case-photo-strip"></div>
+            </section>
+
+            <section class="case-block case-notes-drawer">
+                <h3>Gaveta de notas</h3>
+                <input id="case-note-title" class="case-input" type="text" placeholder="Titulo da nota">
+                <textarea id="case-note-text" class="case-textarea" rows="3" placeholder="Texto da nota"></textarea>
+                <button id="case-add-note" class="case-btn" type="button">Arquivar nota</button>
+                <div id="case-notes-list" class="case-mini-list"></div>
+            </section>
+
+            <section class="case-block case-pages-section">
+                <h3>Paginas de texto</h3>
+                <input id="case-page-title" class="case-input" type="text" placeholder="Titulo da pagina">
+                <textarea id="case-page-text" class="case-textarea" rows="5" placeholder="Conteudo da pagina"></textarea>
+                <button id="case-add-page" class="case-btn" type="button">Arquivar pagina</button>
+                <div id="case-pages-list" class="case-pages-list"></div>
+            </section>
+
+            <section class="case-block case-audio-files">
+                <h3>Log de audios</h3>
+                <input id="case-audio-title" class="case-input" type="text" placeholder="Titulo do audio">
+                <input id="case-audio-url" class="case-input" type="text" placeholder="URL do audio">
+                <button id="case-add-audio" class="case-btn" type="button">Arquivar audio</button>
+                <div id="case-audios-list" class="case-audio-log"></div>
+            </section>
+
+            <section class="case-block case-dossier-section">
+                <h3>Fichas do caso</h3>
+                <div class="case-dossier-form">
+                    <input id="case-dossier-name" class="case-input" type="text" placeholder="Nomenclatura">
+                    <input id="case-dossier-photos" class="case-input" type="text" placeholder="Fotos separadas por virgula">
+                    <textarea id="case-dossier-description" class="case-textarea" rows="3" placeholder="Descricao"></textarea>
+                    <button id="case-add-dossier" class="case-btn" type="button">Adicionar ficha</button>
+                </div>
+                <div id="case-dossiers-list" class="case-dossier-list"></div>
+            </section>
+
+            <section id="case-board-area" class="case-board-area">
+                <div class="case-section-head">
+                    <h3>Quadro de investigacao</h3>
+                </div>
+                <div class="case-board-tools">
+                    <select id="case-board-line-color" class="case-input case-line-color">
+                        <option value="#a30e0e">Linha vermelha</option>
+                        <option value="#16d96d">Linha verde</option>
+                        <option value="#d9c74a">Linha amarela</option>
+                        <option value="#5aa7ff">Linha azul</option>
+                        <option value="#e86cff">Linha violeta</option>
+                    </select>
+                    <button id="case-board-add-line" class="case-btn" type="button">Adicionar linhas</button>
+                    <button id="case-board-delete-line" class="case-btn" type="button">Remover linha</button>
+                    <button id="case-board-fullscreen" class="case-btn" type="button">Tela cheia</button>
+                </div>
+                <div id="case-board" class="case-board">
+                    <div class="case-board-zoom-panel">
+                        <button id="case-board-zoom-toggle" type="button">LUPA</button>
+                        <div id="case-board-zoom-controls" class="case-board-zoom-controls case-hidden">
+                            <input id="case-board-zoom" type="range" min="3" max="600" value="65">
+                            <span id="case-board-zoom-label">65%</span>
+                        </div>
+                    </div>
+                    <div id="case-board-viewport" class="case-board-viewport">
+                        <div id="case-board-world" class="case-board-world">
+                            <svg id="case-board-lines" class="case-board-lines"></svg>
+                            <div id="case-board-items" class="case-board-items"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <div id="case-zoom" class="case-zoom case-hidden">
+        <button id="case-zoom-close" type="button">Fechar</button>
+        <div id="case-zoom-content" class="case-zoom-content"></div>
+    </div>
+
+</div>

@@ -1,0 +1,207 @@
+<div class="library-page">
+
+    <header class="library-header">
+        <div>
+            <h1>BIBLIOTECA</h1>
+            <p class="library-subtitle">Arquivo vivo da campanha</p>
+        </div>
+        <button id="library-close-book" class="library-btn ghost hidden" type="button">Fechar Livro</button>
+    </header>
+
+    <section id="library-shelves" class="library-shelves">
+
+        <nav id="library-categories" class="library-categories"></nav>
+
+        <section class="library-shelf">
+            <div class="library-shelf-head">
+                <div>
+                    <h2 id="library-category-title">Livros</h2>
+                    <p id="library-category-note">Tudo que sobrevive aos casos fica catalogado aqui.</p>
+                </div>
+                <input id="library-book-search" class="library-input" type="text" placeholder="Buscar livro...">
+            </div>
+
+            <div class="library-create-book">
+                <label class="library-field wide">
+                    <span>Titulo do livro</span>
+                    <input id="library-book-title" class="library-input" type="text" placeholder="Ex: Arquivos do caso Mercer">
+                </label>
+                <label class="library-field">
+                    <span>Senha opcional</span>
+                    <input id="library-book-password" class="library-input" type="text" placeholder="Deixe vazio para publico">
+                </label>
+                <label class="library-field">
+                    <span>Selo</span>
+                    <select id="library-book-seal" class="library-input">
+                        <option value="incompleto">Incompleto</option>
+                        <option value="confidencial">Confidencial</option>
+                        <option value="completo">Completo</option>
+                        <option value="verificado">Verificado</option>
+                        <option value="perdido">Perdido</option>
+                    </select>
+                </label>
+                <button id="library-create-book-btn" class="library-btn" type="button">Criar Livro</button>
+            </div>
+
+            <div id="library-books" class="library-books"></div>
+        </section>
+
+    </section>
+
+    <section id="library-reader" class="library-reader hidden">
+
+        <aside class="library-book-tools">
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Livro</button>
+                <input id="library-edit-title" class="library-input" type="text" placeholder="Titulo">
+                <select id="library-edit-seal" class="library-input">
+                    <option value="confidencial">Confidencial</option>
+                    <option value="incompleto">Incompleto</option>
+                    <option value="completo">Completo</option>
+                    <option value="verificado">Verificado</option>
+                    <option value="perdido">Perdido</option>
+                </select>
+                <select id="library-edit-font" class="library-input">
+                    <option value="Georgia, serif" style="font-family:Georgia, serif;">Georgia elegante</option>
+                    <option value="'Courier New', monospace" style="font-family:'Courier New', monospace;">Courier terminal</option>
+                    <option value="'Times New Roman', serif" style="font-family:'Times New Roman', serif;">Times classica</option>
+                    <option value="'Trebuchet MS', sans-serif" style="font-family:'Trebuchet MS', sans-serif;">Trebuchet limpa</option>
+                    <option value="Verdana, sans-serif" style="font-family:Verdana, sans-serif;">Verdana clara</option>
+                    <option value="Arial, sans-serif" style="font-family:Arial, sans-serif;">Arial simples</option>
+                    <option value="Tahoma, sans-serif" style="font-family:Tahoma, sans-serif;">Tahoma seca</option>
+                    <option value="'Lucida Handwriting', cursive" style="font-family:'Lucida Handwriting', cursive;">Manuscrita inclinada</option>
+                    <option value="'Brush Script MT', cursive" style="font-family:'Brush Script MT', cursive;">Cursiva teatral</option>
+                    <option value="'Garamond', serif" style="font-family:Garamond, serif;">Garamond antiga</option>
+                    <option value="'Comic Sans MS', cursive" style="font-family:'Comic Sans MS', cursive;">Redondinha macia</option>
+                    <option value="'Century Gothic', sans-serif" style="font-family:'Century Gothic', sans-serif;">Circular moderna</option>
+                    <option value="'Cooper Black', serif" style="font-family:'Cooper Black', serif;">Pesada arredondada</option>
+                    <option value="'Franklin Gothic Medium', sans-serif" style="font-family:'Franklin Gothic Medium', sans-serif;">Arquivo forte</option>
+                    <option value="'Palatino Linotype', serif" style="font-family:'Palatino Linotype', serif;">Antiga literaria</option>
+                    <option value="Impact, sans-serif" style="font-family:Impact, sans-serif;">Impact brutal</option>
+                    <option value="'Showcard Gothic', 'Copperplate Gothic Bold', Impact, fantasy" style="font-family:'Showcard Gothic', 'Copperplate Gothic Bold', Impact, fantasy;">Rock pesado</option>
+                    <option value="Chiller, Jokerman, Impact, fantasy" style="font-family:Chiller, Jokerman, Impact, fantasy;">Rachada sinistra</option>
+                    <option value="Jokerman, Chiller, fantasy" style="font-family:Jokerman, Chiller, fantasy;">Fragmentada estranha</option>
+                    <option value="Ravie, 'Cooper Black', Impact, fantasy" style="font-family:Ravie, 'Cooper Black', Impact, fantasy;">Caotica grossa</option>
+                    <option value="'Copperplate Gothic Bold', Impact, fantasy" style="font-family:'Copperplate Gothic Bold', Impact, fantasy;">Gotica grossa</option>
+                    <option value="Stencil, 'Copperplate Gothic Bold', Impact, fantasy" style="font-family:Stencil, 'Copperplate Gothic Bold', Impact, fantasy;">Stencil militar</option>
+                    <option value="'Old English Text MT', 'Blackletter', 'Copperplate Gothic Bold', serif" style="font-family:'Old English Text MT', 'Blackletter', 'Copperplate Gothic Bold', serif;">Gotica antiga</option>
+                    <option value="'Blackadder ITC', 'Brush Script MT', cursive" style="font-family:'Blackadder ITC', 'Brush Script MT', cursive;">Assinatura sombria</option>
+                    <option value="'Bauhaus 93', fantasy" style="font-family:'Bauhaus 93', fantasy;">Bauhaus redonda</option>
+                    <option value="'Wide Latin', fantasy" style="font-family:'Wide Latin', fantasy;">Larga ritual</option>
+                    <option value="Papyrus, fantasy" style="font-family:Papyrus, fantasy;">Pergaminho seco</option>
+                </select>
+                <input id="library-edit-color" class="library-input" type="color" value="#1b130d">
+                <label class="library-mini-label">Cor da capa</label>
+                <input id="library-cover-color" class="library-input" type="color" value="#17100c">
+                <label class="library-mini-label">Borda da capa</label>
+                <input id="library-cover-border" class="library-input" type="color" value="#2d2118">
+                <input id="library-edit-password" class="library-input" type="text" placeholder="Senha do livro">
+                <button id="library-save-book" class="library-btn" type="button">Salvar Livro</button>
+                <button id="library-delete-book" class="library-btn danger" type="button">Tirar da Prateleira</button>
+            </div>
+
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Pagina</button>
+                <input id="library-page-jump" class="library-input" type="number" min="1" placeholder="Ir para pagina">
+                <button id="library-jump-page" class="library-btn ghost" type="button">Ir</button>
+                <button id="library-back-page" class="library-btn ghost" type="button">Voltar</button>
+                <button id="library-return-shelves" class="library-btn ghost" type="button">Biblioteca</button>
+                <button id="library-add-page" class="library-btn" type="button">Nova Pagina</button>
+                <button id="library-save-page" class="library-btn" type="button">Salvar Pagina</button>
+                <button id="library-tear-page" class="library-btn danger" type="button">Arrancar Pagina</button>
+            </div>
+
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Escrita</button>
+                <input id="library-page-title" class="library-input" type="text" placeholder="Titulo da pagina">
+                <select id="library-selection-font" class="library-input">
+                    <option value="">Fonte do trecho</option>
+                    <option value="Georgia" style="font-family:Georgia, serif;">Georgia elegante</option>
+                    <option value="Courier New" style="font-family:'Courier New', monospace;">Courier terminal</option>
+                    <option value="Times New Roman" style="font-family:'Times New Roman', serif;">Times classica</option>
+                    <option value="Trebuchet MS" style="font-family:'Trebuchet MS', sans-serif;">Trebuchet limpa</option>
+                    <option value="Verdana" style="font-family:Verdana, sans-serif;">Verdana clara</option>
+                    <option value="Arial" style="font-family:Arial, sans-serif;">Arial simples</option>
+                    <option value="Tahoma" style="font-family:Tahoma, sans-serif;">Tahoma seca</option>
+                    <option value="Lucida Handwriting" style="font-family:'Lucida Handwriting', cursive;">Manuscrita inclinada</option>
+                    <option value="Brush Script MT" style="font-family:'Brush Script MT', cursive;">Cursiva teatral</option>
+                    <option value="Garamond" style="font-family:Garamond, serif;">Garamond antiga</option>
+                    <option value="Comic Sans MS" style="font-family:'Comic Sans MS', cursive;">Redondinha macia</option>
+                    <option value="Century Gothic" style="font-family:'Century Gothic', sans-serif;">Circular moderna</option>
+                    <option value="Cooper Black" style="font-family:'Cooper Black', serif;">Pesada arredondada</option>
+                    <option value="Franklin Gothic Medium" style="font-family:'Franklin Gothic Medium', sans-serif;">Arquivo forte</option>
+                    <option value="Palatino Linotype" style="font-family:'Palatino Linotype', serif;">Antiga literaria</option>
+                    <option value="Impact" style="font-family:Impact, sans-serif;">Impact brutal</option>
+                    <option value="'Showcard Gothic', 'Copperplate Gothic Bold', Impact, fantasy" style="font-family:'Showcard Gothic', 'Copperplate Gothic Bold', Impact, fantasy;">Rock pesado</option>
+                    <option value="Chiller, Jokerman, Impact, fantasy" style="font-family:Chiller, Jokerman, Impact, fantasy;">Rachada sinistra</option>
+                    <option value="Jokerman, Chiller, fantasy" style="font-family:Jokerman, Chiller, fantasy;">Fragmentada estranha</option>
+                    <option value="Ravie, 'Cooper Black', Impact, fantasy" style="font-family:Ravie, 'Cooper Black', Impact, fantasy;">Caotica grossa</option>
+                    <option value="'Copperplate Gothic Bold', Impact, fantasy" style="font-family:'Copperplate Gothic Bold', Impact, fantasy;">Gotica grossa</option>
+                    <option value="Stencil, 'Copperplate Gothic Bold', Impact, fantasy" style="font-family:Stencil, 'Copperplate Gothic Bold', Impact, fantasy;">Stencil militar</option>
+                    <option value="'Old English Text MT', 'Blackletter', 'Copperplate Gothic Bold', serif" style="font-family:'Old English Text MT', 'Blackletter', 'Copperplate Gothic Bold', serif;">Gotica antiga</option>
+                    <option value="'Blackadder ITC', 'Brush Script MT', cursive" style="font-family:'Blackadder ITC', 'Brush Script MT', cursive;">Assinatura sombria</option>
+                    <option value="Bauhaus 93" style="font-family:'Bauhaus 93', fantasy;">Bauhaus redonda</option>
+                    <option value="Wide Latin" style="font-family:'Wide Latin', fantasy;">Larga ritual</option>
+                    <option value="Papyrus" style="font-family:Papyrus, fantasy;">Pergaminho seco</option>
+                </select>
+                <div class="library-format-toolbar">
+                    <button class="library-format-btn" data-command="bold" type="button">B</button>
+                    <button class="library-format-btn" data-command="italic" type="button">I</button>
+                    <button class="library-format-btn" data-command="underline" type="button">U</button>
+                    <button class="library-format-btn" data-command="strikeThrough" type="button">S</button>
+                    <button class="library-format-btn" data-command="insertUnorderedList" type="button">Lista</button>
+                    <button class="library-format-btn" data-command="insertOrderedList" type="button">1.</button>
+                    <button class="library-format-btn" data-command="justifyLeft" type="button">Esq</button>
+                    <button class="library-format-btn" data-command="justifyCenter" type="button">Centro</button>
+                    <button class="library-format-btn" data-command="justifyRight" type="button">Dir</button>
+                    <button class="library-format-btn" data-block="h2" type="button">Titulo</button>
+                    <button class="library-format-btn" data-block="blockquote" type="button">Cita</button>
+                    <button class="library-format-btn" data-block="p" type="button">Texto</button>
+                </div>
+                <input id="library-text-color" class="library-input" type="color" value="#1b130d">
+                <button id="library-apply-color" class="library-btn ghost" type="button">Cor do Texto</button>
+                <button id="library-toggle-drawing" class="library-btn ghost" type="button">Modo Desenho</button>
+                <button id="library-toggle-eraser" class="library-btn ghost" type="button">Borracha</button>
+                <button id="library-clear-drawings" class="library-btn danger" type="button">Apagar Desenhos</button>
+                <input id="library-highlight-words" class="library-input" type="text" placeholder="Destacar palavras">
+                <button id="library-apply-highlights" class="library-btn ghost" type="button">Destacar</button>
+                <button id="library-clear-highlights" class="library-btn ghost" type="button">Tirar Destaque</button>
+            </div>
+
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Imagem e Nota</button>
+                <input id="library-image-url" class="library-input" type="text" placeholder="URL da imagem">
+                <button id="library-add-image" class="library-btn ghost" type="button">Colocar Imagem</button>
+                <textarea id="library-note-text" class="library-input" rows="3" placeholder="Nota anonima"></textarea>
+                <button id="library-add-note" class="library-btn ghost" type="button">Deixar Nota</button>
+            </div>
+
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Referencias</button>
+                <input id="library-ref-label" class="library-input" type="text" placeholder="Texto do link">
+                <input id="library-ref-book" class="library-input" type="text" placeholder="ID do livro">
+                <input id="library-ref-page" class="library-input" type="number" min="1" placeholder="Pagina">
+                <button id="library-ref-selection" class="library-btn ghost" type="button">Usar Selecao</button>
+                <button id="library-add-ref" class="library-btn ghost" type="button">Referenciar</button>
+            </div>
+        </aside>
+
+        <article id="library-book-stage" class="library-book-stage">
+            <div class="library-book-cover">
+                <div>
+                    <span id="library-open-seal" class="library-seal">INCOMPLETO</span>
+                    <h2 id="library-open-title">Livro</h2>
+                    <p id="library-open-meta">Arquivo da Biblioteca</p>
+                </div>
+            </div>
+
+            <div class="library-book-spread">
+                <button id="library-prev-page" class="library-page-arrow" type="button">&lt;</button>
+                <div id="library-page-view" class="library-paper"></div>
+                <button id="library-next-page" class="library-page-arrow" type="button">&gt;</button>
+            </div>
+        </article>
+
+    </section>
+
+</div>

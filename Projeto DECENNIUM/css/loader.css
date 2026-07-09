@@ -1,0 +1,253 @@
+/* ==========================================================
+   MAGNUS FILES — BOOT FLASH
+   Piscar rápido verde com símbolo < 0 >
+========================================================== */
+
+#mc-loader {
+
+    position: fixed;
+
+    top: 0;
+
+    left: 0;
+
+    width: 100vw;
+
+    height: 100vh;
+
+    z-index: 10000;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: #000;
+
+    font-family: Consolas, "Courier New", monospace;
+
+}
+
+#mc-loader.mc-loader-visible {
+
+    display: flex;
+
+}
+
+/* ==========================================================
+   SÍMBOLO CENTRAL
+========================================================== */
+
+.mc-loader-symbol {
+
+    font-size: 72px;
+
+    letter-spacing: 12px;
+
+    color: #000;
+
+    font-weight: bold;
+
+    user-select: none;
+
+    animation: mc-flash-symbol 0.04s steps(1) infinite;
+
+}
+
+/* ==========================================================
+   FLASH / PISCAR
+========================================================== */
+
+@keyframes mc-flash-symbol {
+
+    0%   { color: #000; }
+    15%  { color: #0f0; }
+    30%  { color: #000; }
+    40%  { color: #0d0; }
+    50%  { color: #000; }
+    60%  { color: #0f0; }
+    70%  { color: #000; }
+    85%  { color: #0b0; }
+    100% { color: #000; }
+
+}
+
+/* ==========================================================
+   FLASH DE FUNDO
+========================================================== */
+
+#mc-loader.mc-loader-visible {
+
+    animation: mc-flash-bg 0.05s steps(1) infinite;
+
+}
+
+@keyframes mc-flash-bg {
+
+    0%   { background: #000; }
+    20%  { background: #001a00; }
+    35%  { background: #000; }
+    50%  { background: #000d00; }
+    65%  { background: #000; }
+    80%  { background: #001800; }
+    100% { background: #000; }
+
+}
+
+/* ==========================================================
+   LINHA DE SCAN
+========================================================== */
+
+#mc-loader::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background: repeating-linear-gradient(
+
+        to bottom,
+
+        transparent 0px,
+
+        transparent 2px,
+
+        rgba(0, 255, 0, 0.015) 2px,
+
+        rgba(0, 255, 0, 0.015) 4px
+
+    );
+
+    pointer-events: none;
+
+}
+
+/* ==========================================================
+   RESPONSIVO
+========================================================== */
+
+@media (max-width: 700px) {
+
+    .mc-loader-symbol {
+
+        font-size: 48px;
+
+        letter-spacing: 8px;
+
+    }
+
+}
+
+.mc-engine-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: block;
+    background: #000;
+    color: #00ff66;
+    font-family: Consolas, "Courier New", monospace;
+    padding: 22px;
+    box-sizing: border-box;
+}
+
+.mc-engine-boot.hidden {
+    display: none;
+}
+
+.mc-engine-boot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2px,
+        rgba(0, 255, 102, .018) 2px,
+        rgba(0, 255, 102, .018) 4px
+    );
+    pointer-events: none;
+}
+
+.mc-engine-boot-box {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+}
+
+.mc-engine-boot-brand,
+.mc-engine-boot-title {
+    flex: 0 0 auto;
+}
+
+.mc-engine-boot-brand {
+    color: #00ff66;
+    letter-spacing: 1px;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.mc-engine-boot-title {
+    color: #00aa44;
+    letter-spacing: 0;
+    font-size: 13px;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 18px;
+}
+
+.mc-engine-boot-log {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 3px;
+    color: #b7ffd0;
+    font-size: 14px;
+    line-height: 1.25;
+    overflow: hidden;
+}
+
+.mc-engine-boot-log span {
+    opacity: .92;
+}
+
+.mc-engine-boot-glitch {
+    color: #b7ffd0;
+    animation: mc-engine-boot-glitch .18s steps(1) 3;
+}
+
+@keyframes mc-engine-boot-glitch {
+    0%, 100% { color: #b7ffd0; transform: translateX(0); }
+    33% { color: #00ff66; transform: translateX(2px); }
+    66% { color: #fff; transform: translateX(-1px); }
+}
+
+.mc-engine-boot-status {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: #00ff66;
+    border-top: none;
+    padding-top: 0;
+    margin-top: 10px;
+    font-size: 14px;
+    letter-spacing: 0;
+}
+
+.mc-engine-boot-cursor {
+    animation: mc-boot-cursor .75s steps(1) infinite;
+}
+
+@keyframes mc-boot-cursor {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
