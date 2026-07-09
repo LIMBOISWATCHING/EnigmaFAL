@@ -437,12 +437,15 @@ class PersonalBoard {
             const midX = (from.x + to.x) / 2;
             const midY = (from.y + to.y) / 2;
             const angle = this.lineLabelAngle(from, to);
+            const label = String(link.label || "").trim();
+            const labelWidth = this.lineLabelWidth(label);
+            const labelTextWidth = Math.max(120, labelWidth - 28);
             return `<g class="case-board-line-group" data-id="${this.esc(link.id)}">
                 <line class="case-board-line-hit" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"></line>
                 <line class="case-board-line-visual" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" style="stroke:${this.esc(link.color || "#a30e0e")}"></line>
                 <g class="case-board-line-ui" transform="translate(${midX} ${midY}) rotate(${angle})">
                     <rect class="case-board-line-ui-hit" x="-104" y="-42" width="208" height="78"></rect>
-                    ${link.label ? `<g class="case-board-line-label" transform="translate(0 -24)"><rect x="-90" y="-15" width="180" height="30"></rect><text text-anchor="middle" dominant-baseline="middle">${this.esc(link.label)}</text></g>` : ""}
+                    ${label ? `<g class="case-board-line-label" transform="translate(0 -24)"><rect x="${-labelWidth / 2}" y="-17" width="${labelWidth}" height="34"></rect><text text-anchor="middle" dominant-baseline="middle" textLength="${labelTextWidth}" lengthAdjust="spacingAndGlyphs">${this.esc(label)}</text></g>` : ""}
                     <g class="case-board-line-palette" transform="translate(-70 16)">
                         ${this.lineColors().map((entry, index) => `<circle class="case-board-line-color" data-color="${entry}" cx="${index * 28}" cy="0" r="8" style="fill:${entry}"></circle>`).join("")}
                     </g>
@@ -484,6 +487,10 @@ class PersonalBoard {
                 this.changeLineColor(button.closest(".case-board-line-group")?.dataset.id, button.dataset.color);
             });
         });
+    }
+
+    lineLabelWidth(label = "") {
+        return this.clamp(String(label || "").length * 13 + 42, 180, 520);
     }
 
     lineColors() {
