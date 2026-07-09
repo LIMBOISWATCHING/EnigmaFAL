@@ -317,15 +317,23 @@ class Library {
             return;
         }
 
-        const canEdit = MC.Services.Library.canEditPage(page) && !page.torn;
-        const canDraw = !page.torn;
+        const pageTorn = this.isTornPage(page);
+        const canEdit = MC.Services.Library.canEditPage(page) && !pageTorn;
+        const canDraw = !pageTorn;
         const canTear = MC.Services.Library.canTearPage(book, page);
+        if (pageTorn) {
+            this.drawingMode = false;
+            this.eraserMode = false;
+            this.drawing = false;
+            this.erasing = false;
+            this.currentLine = null;
+        }
 
         this.set("library-page-title", page.title || "");
         this.set("library-highlight-words", (page.highlightWords || []).join(", "));
         this.byId("library-page-title").disabled = !canEdit;
         this.byId("library-save-page").disabled = !canEdit;
-        this.byId("library-tear-page").disabled = !canTear || page.torn;
+        this.byId("library-tear-page").disabled = !canTear || pageTorn;
         [
             "library-text-color",
             "library-selection-font",
@@ -352,15 +360,16 @@ class Library {
 
         ["library-image-url", "library-add-image", "library-note-text", "library-add-note"].forEach(id => {
             const el = this.byId(id);
-            if (el) el.disabled = Boolean(page.torn);
+            if (el) el.disabled = pageTorn;
         });
 
-        paper.innerHTML = page.torn
+        paper.innerHTML = pageTorn
             ? this.renderTornPage(page)
             : this.renderWritablePage(page, canEdit);
 
         paper.classList.toggle("drawing-mode", this.drawingMode);
         paper.classList.toggle("eraser-mode", this.eraserMode);
+        paper.classList.toggle("torn", pageTorn);
 
         this.bindPageSurface(page, canEdit, canDraw);
         this.applyHighlights(page.highlightWords || []);
@@ -893,6 +902,24 @@ class Library {
 
     }
 
+    isTornPage(page) {
+
+        return page?.torn === true || page?.torn === "true" || page?.torn === 1 || page?.torn === "1";
+
+    }
+
+    async saveBeforePageNavigation() {
+
+        const page = this.currentPage();
+        if (!page || this.isTornPage(page) || page.deleted) {
+            this.dirty = false;
+            return true;
+        }
+
+        return await this.savePage({ silent: true, render: false });
+
+    }
+
     async saveBook() {
 
         if (!this.activeBook) return;
@@ -958,7 +985,7 @@ class Library {
 
         const page = this.currentPage();
         if (!page) return true;
-        if (page.torn || page.deleted) {
+        if (this.isTornPage(page) || page.deleted) {
             this.dirty = false;
             return true;
         }
@@ -984,7 +1011,7 @@ class Library {
         const currentPageNumber = current?.pageNumber;
         const currentPageId = current?.id;
 
-        if (current && !current.torn && !current.deleted) {
+        if (current && !this.isTornPage(current) && !current.deleted) {
             const saved = await this.savePage({ silent: options.silent, render: false });
             if (!saved) return false;
         }
@@ -1069,8 +1096,10 @@ class Library {
     async changePage(delta) {
 
         if (!this.pages.length) return;
-        if (!await this.savePage({ silent: true, render: false })) return;
-        this.goToPageIndex(Math.max(0, Math.min(this.pages.length - 1, this.activePageIndex + delta)), true);
+        if (!await this.saveBeforePageNavigation()) return;
+
+        const nextIndex = Math.max(0, Math.min(this.pages.length - 1, this.activePageIndex + delta));
+        this.goToPageIndex(nextIndex, true);
 
     }
 
@@ -1082,7 +1111,7 @@ class Library {
             await MC.UI.alert("Pagina nao encontrada.");
             return;
         }
-        if (!await this.savePage({ silent: true, render: false })) return;
+        if (!await this.saveBeforePageNavigation()) return;
         this.goToPageIndex(index, true);
 
     }
@@ -1110,7 +1139,7 @@ class Library {
             return;
         }
 
-        if (!await this.savePage({ silent: true, render: false })) return;
+        if (!await this.saveBeforePageNavigation()) return;
 
         const previous = this.pageHistory.pop();
 
@@ -1267,7 +1296,7 @@ class Library {
     async clearDrawings() {
 
         const page = this.currentPage();
-        if (!page || page.torn) return;
+        if (!page || this.isTornPage(page)) return;
         if (!await MC.UI.confirm("Apagar todos os desenhos desta pagina?")) return;
 
         page.drawings = [];
