@@ -372,6 +372,9 @@ class Library {
         return `
             <div class="library-page-number">Pagina ${this.esc(page.pageNumber)} | pagina arrancada</div>
             <div class="library-torn-page">
+                <i></i>
+                <i></i>
+                <i></i>
                 <span></span>
                 <span></span>
                 <span></span>
@@ -955,6 +958,10 @@ class Library {
 
         const page = this.currentPage();
         if (!page) return true;
+        if (page.torn || page.deleted) {
+            this.dirty = false;
+            return true;
+        }
 
         try {
             const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page));
