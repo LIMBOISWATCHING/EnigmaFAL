@@ -957,7 +957,7 @@ class Library {
         if (!page) return true;
 
         try {
-            const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page, page === this.currentPage()));
+            const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page));
             this.pages[this.activePageIndex] = updated;
             this.dirty = false;
             if (options.render !== false) this.renderOpenBook();
@@ -973,61 +973,45 @@ class Library {
 
         if (!this.pages.length) return true;
 
-        let failed = false;
+        const current = this.currentPage();
+        const currentPageNumber = current?.pageNumber;
+        const currentPageId = current?.id;
 
-        for (let index = 0; index < this.pages.length; index++) {
-            const page = this.pages[index];
-            if (!page || page.torn || page.deleted) continue;
-
-            try {
-                const updated = await MC.Services.Library.updatePage(
-                    page.id,
-                    this.pageSavePayload(page, index === this.activePageIndex)
-                );
-                this.pages[index] = updated;
-            } catch (err) {
-                const message = String(err?.message || "");
-                if (message.includes("Somente quem escreveu")) continue;
-                failed = true;
-                if (!options.silent) await MC.UI.alert(message || "Erro ao salvar paginas.");
-                break;
-            }
+        if (current && !current.torn && !current.deleted) {
+            const saved = await this.savePage({ silent: options.silent, render: false });
+            if (!saved) return false;
         }
 
-        if (!failed) this.dirty = false;
-        return !failed;
+        if (this.activeBook?.id) {
+            this.pages = await MC.Services.Library.findPages(this.activeBook.id);
+            const idIndex = this.pages.findIndex(page => page.id === currentPageId);
+            const nextIndex = idIndex >= 0
+                ? idIndex
+                : this.pages.findIndex(page => Number(page.pageNumber) === Number(currentPageNumber));
+            this.activePageIndex = Math.max(0, nextIndex);
+        }
+
+        this.dirty = false;
+        return true;
 
     }
 
-    pageSavePayload(page, fromDom = false) {
+    pageSavePayload(page) {
 
-        if (fromDom) {
-            const editor = this.byId("library-editor");
-            const paperTitle = this.byId("library-paper-title")?.textContent?.trim() || "";
-            const sideTitle = this.byId("library-page-title")?.value.trim() || "";
-
-            return {
-                title: sideTitle || paperTitle,
-                content: this.stripHighlightMarkup(editor?.innerHTML || page.content || ""),
-                drawings: page.drawings || [],
-                images: page.images || [],
-                notes: page.notes || [],
-                references: page.references || [],
-                highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || "")
-            };
-        }
-
+        const editor = this.byId("library-editor");
+        const paperTitle = this.byId("library-paper-title")?.textContent?.trim() || "";
+        const sideTitle = this.byId("library-page-title")?.value.trim() || "";
+    
         return {
-            title: page.title || "",
-            content: page.content || "",
+            title: sideTitle || paperTitle,
+            content: this.stripHighlightMarkup(editor?.innerHTML || page.content || ""),
             drawings: page.drawings || [],
             images: page.images || [],
             notes: page.notes || [],
             references: page.references || [],
-            highlightWords: page.highlightWords || [],
-            pageNumber: page.pageNumber
+            highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || "")
         };
-
+    
     }
 
     async saveBeforeLeavingBook() {
