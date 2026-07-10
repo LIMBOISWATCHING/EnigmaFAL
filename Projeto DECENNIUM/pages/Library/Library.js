@@ -24,6 +24,8 @@ class Library {
         this.zoomImage = null;
         this.zoomScale = 1;
         this.zoomOffset = { x: 0, y: 0 };
+        this.uvLightOn = false;
+        this.uvDrawingMode = false;
 
     }
 
@@ -76,6 +78,10 @@ class Library {
             }
         });
         this.byId("library-toggle-drawing")?.addEventListener("click", () => this.toggleDrawingMode());
+        this.byId("library-toggle-uv-drawing")?.addEventListener("click", () => this.toggleUvDrawingMode());
+        this.byId("library-apply-uv-text")?.addEventListener("mousedown", event => event.preventDefault());
+        this.byId("library-apply-uv-text")?.addEventListener("click", () => this.applyUvText());
+        this.byId("library-uv-light")?.addEventListener("click", () => this.toggleUvLight());
         this.byId("library-toggle-eraser")?.addEventListener("click", () => this.toggleEraserMode());
         this.byId("library-clear-drawings")?.addEventListener("click", () => this.clearDrawings());
         this.byId("library-apply-highlights")?.addEventListener("click", () => this.applyHighlightsFromInput());
@@ -247,6 +253,7 @@ class Library {
         this.byId("library-shelves")?.classList.add("hidden");
         this.byId("library-reader")?.classList.remove("hidden");
         this.byId("library-close-book")?.classList.remove("hidden");
+        this.byId("library-uv-light")?.classList.remove("hidden");
         this.fillBookTools();
         this.renderOpenBook();
 
@@ -262,6 +269,9 @@ class Library {
         this.byId("library-reader")?.classList.add("hidden");
         this.byId("library-shelves")?.classList.remove("hidden");
         this.byId("library-close-book")?.classList.add("hidden");
+        this.byId("library-uv-light")?.classList.add("hidden");
+        this.uvLightOn = false;
+        this.uvDrawingMode = false;
 
     }
 
@@ -276,9 +286,11 @@ class Library {
         this.set("library-edit-color", book.textColor);
         this.set("library-cover-color", book.coverColor || "#17100c");
         this.set("library-cover-border", book.coverBorderColor || "#2d2118");
+        this.set("library-page-style", book.pageStyle || "middle");
+        this.set("library-page-color", book.pageColor || "#d8c49c");
         this.set("library-edit-password", book.password);
 
-        ["library-edit-title", "library-edit-seal", "library-edit-font", "library-edit-color", "library-cover-color", "library-cover-border", "library-edit-password", "library-save-book", "library-delete-book"].forEach(id => {
+        ["library-edit-title", "library-edit-seal", "library-edit-font", "library-edit-color", "library-cover-color", "library-cover-border", "library-page-style", "library-page-color", "library-edit-password", "library-save-book", "library-delete-book"].forEach(id => {
             const el = this.byId(id);
             if (el) el.disabled = !canManage;
         });
@@ -305,6 +317,10 @@ class Library {
 
         paper.style.fontFamily = book.fontFamily;
         paper.style.color = book.textColor;
+        paper.style.setProperty("--library-page-color", book.pageColor || "#d8c49c");
+        paper.classList.remove("page-style-a4", "page-style-middle", "page-style-aged", "page-style-custom");
+        paper.classList.add(`page-style-${book.pageStyle || "middle"}`);
+        paper.classList.toggle("uv-light-on", this.uvLightOn);
 
         if (!page) {
             paper.innerHTML = `
@@ -339,6 +355,7 @@ class Library {
             "library-selection-font",
             "library-selection-size",
             "library-apply-color",
+            "library-apply-uv-text",
             ...Array.from(this.container.querySelectorAll(".library-format-btn")),
             "library-highlight-words",
             "library-apply-highlights",
@@ -353,7 +370,7 @@ class Library {
             if (el) el.disabled = !canEdit;
         });
 
-        ["library-toggle-drawing", "library-toggle-eraser", "library-clear-drawings"].forEach(id => {
+        ["library-toggle-drawing", "library-toggle-uv-drawing", "library-toggle-eraser", "library-clear-drawings"].forEach(id => {
             const el = this.byId(id);
             if (el) el.disabled = !canDraw;
         });
@@ -370,6 +387,7 @@ class Library {
         paper.classList.toggle("drawing-mode", this.drawingMode);
         paper.classList.toggle("eraser-mode", this.eraserMode);
         paper.classList.toggle("torn", pageTorn);
+        paper.classList.toggle("uv-light-on", this.uvLightOn);
 
         this.bindPageSurface(page, canEdit, canDraw);
         this.applyHighlights(page.highlightWords || []);
@@ -438,9 +456,24 @@ class Library {
         this.bindCanvas(page, canDraw);
         this.bindMovableImages(page, canEdit);
         this.bindNotes(page);
+        this.bindUvLightMovement();
 
         this.container.querySelectorAll(".library-ref-link").forEach(button => {
             button.addEventListener("click", () => this.openBook(button.dataset.book, Number(button.dataset.page || 1), true));
+        });
+
+    }
+
+    bindUvLightMovement() {
+
+        const paper = this.byId("library-page-view");
+        if (!paper) return;
+
+        paper.addEventListener("pointermove", event => {
+            if (!this.uvLightOn) return;
+            const rect = paper.getBoundingClientRect();
+            paper.style.setProperty("--uv-x", `${event.clientX - rect.left}px`);
+            paper.style.setProperty("--uv-y", `${event.clientY - rect.top}px`);
         });
 
     }
@@ -455,7 +488,10 @@ class Library {
 
         (page.drawings || []).forEach(line => {
             if (line.type !== "line" || !line.points?.length) return;
-            ctx.strokeStyle = line.color || "#000";
+            if (line.uv && !this.uvLightOn) return;
+            ctx.strokeStyle = line.uv ? "rgba(183, 120, 255, .95)" : (line.color || "#000");
+            ctx.shadowColor = line.uv ? "rgba(183, 120, 255, .75)" : "transparent";
+            ctx.shadowBlur = line.uv ? 10 : 0;
             ctx.lineWidth = Number(line.size || 3);
             ctx.lineCap = "round";
             ctx.beginPath();
@@ -464,6 +500,7 @@ class Library {
                 else ctx.lineTo(point.x, point.y);
             });
             ctx.stroke();
+            ctx.shadowBlur = 0;
         });
 
     }
@@ -485,7 +522,7 @@ class Library {
             }
 
             this.drawing = true;
-            this.currentLine = { type: "line", color: this.byId("library-text-color")?.value || "#000", size: 3, points: [] };
+            this.currentLine = { type: "line", color: this.byId("library-text-color")?.value || "#000", size: 3, uv: this.uvDrawingMode, points: [] };
             this.addLinePoint(canvas, event);
         });
 
@@ -937,6 +974,8 @@ class Library {
                 textColor: this.byId("library-edit-color")?.value || this.activeBook.textColor,
                 coverColor: this.byId("library-cover-color")?.value || this.activeBook.coverColor,
                 coverBorderColor: this.byId("library-cover-border")?.value || this.activeBook.coverBorderColor,
+                pageStyle: this.byId("library-page-style")?.value || this.activeBook.pageStyle,
+                pageColor: this.byId("library-page-color")?.value || this.activeBook.pageColor,
                 password: this.byId("library-edit-password")?.value.trim() || ""
             });
             this.dirty = false;
@@ -1066,6 +1105,8 @@ class Library {
                 textColor: this.byId("library-edit-color")?.value || this.activeBook.textColor,
                 coverColor: this.byId("library-cover-color")?.value || this.activeBook.coverColor,
                 coverBorderColor: this.byId("library-cover-border")?.value || this.activeBook.coverBorderColor,
+                pageStyle: this.byId("library-page-style")?.value || this.activeBook.pageStyle,
+                pageColor: this.byId("library-page-color")?.value || this.activeBook.pageColor,
                 password: this.byId("library-edit-password")?.value.trim() || ""
             });
             this.dirty = false;
@@ -1161,6 +1202,28 @@ class Library {
         this.restoreEditorSelection();
         document.execCommand("foreColor", false, color);
         this.dirty = true;
+
+    }
+
+    applyUvText() {
+
+        this.restoreEditorSelection();
+
+        const selection = window.getSelection?.();
+        const editor = this.byId("library-editor");
+
+        if (selection && selection.rangeCount && !selection.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            if (!editor || !editor.contains(range.commonAncestorContainer)) return;
+            const span = document.createElement("span");
+            span.className = "library-uv-text";
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+            selection.removeAllRanges();
+            selection.selectAllChildren(span);
+            this.savedSelection = selection.getRangeAt(0).cloneRange();
+            this.dirty = true;
+        }
 
     }
 
@@ -1273,6 +1336,23 @@ class Library {
 
     }
 
+    toggleUvDrawingMode() {
+
+        this.uvDrawingMode = !this.uvDrawingMode;
+        if (this.uvDrawingMode) this.drawingMode = true;
+        this.syncDrawingButtons();
+
+    }
+
+    toggleUvLight() {
+
+        this.uvLightOn = !this.uvLightOn;
+        const button = this.byId("library-uv-light");
+        if (button) button.classList.toggle("active", this.uvLightOn);
+        this.renderOpenBook();
+
+    }
+
     toggleEraserMode() {
 
         this.eraserMode = !this.eraserMode;
@@ -1288,6 +1368,8 @@ class Library {
         paper?.classList.toggle("eraser-mode", this.eraserMode);
         const button = this.byId("library-toggle-drawing");
         if (button) button.classList.toggle("active", this.drawingMode);
+        const uvDrawing = this.byId("library-toggle-uv-drawing");
+        if (uvDrawing) uvDrawing.classList.toggle("active", this.uvDrawingMode);
         const eraser = this.byId("library-toggle-eraser");
         if (eraser) eraser.classList.toggle("active", this.eraserMode);
 

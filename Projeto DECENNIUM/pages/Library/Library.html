@@ -5,7 +5,10 @@
             <h1>BIBLIOTECA</h1>
             <p class="library-subtitle">Arquivo vivo da campanha</p>
         </div>
-        <button id="library-close-book" class="library-btn ghost hidden" type="button">Fechar Livro</button>
+        <div class="library-reader-actions">
+            <button id="library-uv-light" class="library-btn ghost hidden" type="button" title="Lanterna UV">UV</button>
+            <button id="library-close-book" class="library-btn ghost hidden" type="button">Fechar Livro</button>
+        </div>
     </header>
 
     <section id="library-shelves" class="library-shelves">
@@ -95,6 +98,15 @@
                 <input id="library-cover-color" class="library-input" type="color" value="#17100c">
                 <label class="library-mini-label">Borda da capa</label>
                 <input id="library-cover-border" class="library-input" type="color" value="#2d2118">
+                <label class="library-mini-label">Base da pagina</label>
+                <select id="library-page-style" class="library-input">
+                    <option value="a4">Branco A4</option>
+                    <option value="middle">Meio termo</option>
+                    <option value="aged">Antiga manchada</option>
+                    <option value="custom">Cor personalizada</option>
+                </select>
+                <label class="library-mini-label">Cor da pagina</label>
+                <input id="library-page-color" class="library-input" type="color" value="#d8c49c">
                 <input id="library-edit-password" class="library-input" type="text" placeholder="Senha do livro">
                 <button id="library-save-book" class="library-btn" type="button">Salvar Livro</button>
                 <button id="library-delete-book" class="library-btn danger" type="button">Tirar da Prateleira</button>
@@ -173,6 +185,8 @@
                 <input id="library-text-color" class="library-input" type="color" value="#1b130d">
                 <button id="library-apply-color" class="library-btn ghost" type="button">Cor do Texto</button>
                 <button id="library-toggle-drawing" class="library-btn ghost" type="button">Modo Desenho</button>
+                <button id="library-toggle-uv-drawing" class="library-btn ghost" type="button">Desenho UV</button>
+                <button id="library-apply-uv-text" class="library-btn ghost" type="button">Texto UV</button>
                 <button id="library-toggle-eraser" class="library-btn ghost" type="button">Borracha</button>
                 <button id="library-clear-drawings" class="library-btn danger" type="button">Apagar Desenhos</button>
                 <input id="library-highlight-words" class="library-input" type="text" placeholder="Destacar palavras">
