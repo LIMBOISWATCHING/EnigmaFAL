@@ -166,6 +166,8 @@ class LibraryService {
             coverStyle: data.coverStyle ?? book.coverStyle,
             coverColor: data.coverColor ?? book.coverColor,
             coverBorderColor: data.coverBorderColor ?? book.coverBorderColor,
+            pageStyle: data.pageStyle ?? book.pageStyle,
+            pageColor: data.pageColor ?? book.pageColor,
             seal: data.seal ?? book.seal,
             password: data.password ?? book.password,
             references: Array.isArray(data.references) ? data.references : book.references
