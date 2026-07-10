@@ -14,6 +14,8 @@ class Library {
         this.search = "";
         this.unlockedBooks = new Set();
         this.dirty = false;
+        this.bookDirty = false;
+        this.pageDirty = false;
         this.drawing = false;
         this.currentLine = null;
         this.drawingMode = false;
@@ -27,8 +29,7 @@ class Library {
         this.uvLightOn = false;
         this.uvDrawingMode = false;
         this.uvSpot = null;
-        this.drawingRedoStack = [];
-        this.drawingUndoStack = [];
+        this.drawingHistory = new Map();
         this.eraseBeforeSnapshot = null;
 
     }
@@ -83,11 +84,11 @@ class Library {
         });
         this.byId("library-page-own-style")?.addEventListener("change", () => {
             this.applyCurrentPageVisuals(this.currentPage(), true);
-            this.dirty = true;
+            this.markPageDirty();
         });
         this.byId("library-page-own-color")?.addEventListener("input", () => {
             this.applyCurrentPageVisuals(this.currentPage(), true);
-            this.dirty = true;
+            this.markPageDirty();
         });
         this.byId("library-toggle-drawing")?.addEventListener("click", () => this.toggleDrawingMode());
         this.byId("library-drawing-undo")?.addEventListener("click", () => this.undoDrawing());
@@ -112,8 +113,8 @@ class Library {
             button.addEventListener("click", () => button.closest(".library-tool-block")?.classList.toggle("collapsed"));
         });
 
-        this.container.addEventListener("input", event => {
-            if (event.target.closest("#library-reader")) this.dirty = true;
+        ["input", "change"].forEach(eventName => {
+            this.container.addEventListener(eventName, event => this.trackReaderDirty(event));
         });
 
     }
@@ -266,6 +267,9 @@ class Library {
         this.pages = await MC.Services.Library.findPages(book.id);
         this.activePageIndex = Math.max(0, this.pages.findIndex(page => Number(page.pageNumber) === Number(requestedPage)));
         if (this.activePageIndex < 0) this.activePageIndex = 0;
+        this.bookDirty = false;
+        this.pageDirty = false;
+        this.refreshDirty();
 
         this.byId("library-shelves")?.classList.add("hidden");
         this.byId("library-reader")?.classList.remove("hidden");
@@ -282,6 +286,8 @@ class Library {
         this.activeBook = null;
         this.pages = [];
         this.dirty = false;
+        this.bookDirty = false;
+        this.pageDirty = false;
         this.pageHistory = [];
         this.byId("library-reader")?.classList.add("hidden");
         this.byId("library-shelves")?.classList.remove("hidden");
@@ -483,7 +489,7 @@ class Library {
 
         const editor = this.byId("library-editor");
         if (editor) {
-            editor.addEventListener("input", () => { this.dirty = true; });
+            editor.addEventListener("input", () => this.markPageDirty());
             editor.addEventListener("mouseup", () => this.saveEditorSelection());
             editor.addEventListener("keyup", () => this.saveEditorSelection());
         }
@@ -492,7 +498,7 @@ class Library {
         if (title) {
             title.addEventListener("input", () => {
                 this.set("library-page-title", title.textContent.trim());
-                this.dirty = true;
+                this.markPageDirty();
             });
         }
 
@@ -759,8 +765,7 @@ class Library {
 
             if (this.eraserMode) {
                 this.erasing = true;
-                this.pushDrawingHistory(page);
-                this.drawingRedoStack = [];
+                this.eraseBeforeSnapshot = this.snapshotDrawings(page);
                 this.eraseLineAt(canvas, event, page);
                 return;
             }
@@ -788,17 +793,16 @@ class Library {
 
             if (this.erasing) {
                 this.erasing = false;
-                this.dirty = true;
+                this.commitEraseHistory(page);
+                this.eraseBeforeSnapshot = null;
                 this.saveDrawings(page);
                 return;
             }
             if (!this.drawing || !this.currentLine) return;
             this.pushDrawingHistory(page);
             page.drawings = [...(page.drawings || []), this.currentLine];
-            this.drawingRedoStack = [];
             this.currentLine = null;
             this.drawing = false;
-            this.dirty = true;
             this.saveDrawings(page);
         };
 
@@ -911,8 +915,6 @@ class Library {
 
         this.pushDrawingHistory(page);
         page.drawings = [...(page.drawings || []), fill];
-        this.drawingRedoStack = [];
-        this.dirty = true;
         this.drawExistingLines(page);
         await this.saveDrawings(page);
 
@@ -949,12 +951,18 @@ class Library {
         const page = this.currentPage();
         if (!page || this.isTornPage(page)) return;
 
-        const previous = this.drawingUndoStack.pop();
+        const state = this.drawingState(page);
+        const current = this.snapshotDrawings(page);
+        let previous = state.undo.pop();
+
+        while (previous && previous === current) {
+            previous = state.undo.pop();
+        }
+
         if (!previous) return;
 
-        this.drawingRedoStack.push(this.snapshotDrawings(page));
+        state.redo.push(current);
         this.restoreDrawingsSnapshot(page, previous);
-        this.dirty = true;
         this.drawExistingLines(page);
         await this.saveDrawings(page);
 
@@ -965,12 +973,18 @@ class Library {
         const page = this.currentPage();
         if (!page || this.isTornPage(page)) return;
 
-        const next = this.drawingRedoStack.pop();
+        const state = this.drawingState(page);
+        const current = this.snapshotDrawings(page);
+        let next = state.redo.pop();
+
+        while (next && next === current) {
+            next = state.redo.pop();
+        }
+
         if (!next) return;
 
-        this.drawingUndoStack.push(this.snapshotDrawings(page));
+        state.undo.push(current);
         this.restoreDrawingsSnapshot(page, next);
-        this.dirty = true;
         this.drawExistingLines(page);
         await this.saveDrawings(page);
 
@@ -1016,7 +1030,6 @@ class Library {
         });
 
         if (JSON.stringify(page.drawings || []) !== before) {
-            this.dirty = true;
             this.drawExistingLines(page);
         }
 
@@ -1046,10 +1059,23 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.updateDrawings(page.id, page.drawings || []);
-            this.pages[this.activePageIndex] = updated;
+            this.replacePage(updated);
+            this.pageDirty = false;
+            this.refreshDirty();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao salvar desenho.");
         }
+
+    }
+
+    drawingState(page) {
+
+        const key = page?.id || "__current_page__";
+        if (!this.drawingHistory.has(key)) {
+            this.drawingHistory.set(key, { undo: [], redo: [] });
+        }
+
+        return this.drawingHistory.get(key);
 
     }
 
@@ -1071,8 +1097,27 @@ class Library {
 
     pushDrawingHistory(page) {
 
-        this.drawingUndoStack.push(this.snapshotDrawings(page));
-        if (this.drawingUndoStack.length > 60) this.drawingUndoStack.shift();
+        const state = this.drawingState(page);
+        const snapshot = this.snapshotDrawings(page);
+        if (state.undo[state.undo.length - 1] === snapshot) return;
+
+        state.undo.push(snapshot);
+        if (state.undo.length > 80) state.undo.shift();
+        state.redo = [];
+
+    }
+
+    commitEraseHistory(page) {
+
+        if (!this.eraseBeforeSnapshot) return;
+        if (this.eraseBeforeSnapshot === this.snapshotDrawings(page)) return;
+
+        const state = this.drawingState(page);
+        if (state.undo[state.undo.length - 1] !== this.eraseBeforeSnapshot) {
+            state.undo.push(this.eraseBeforeSnapshot);
+            if (state.undo.length > 80) state.undo.shift();
+        }
+        state.redo = [];
 
     }
 
@@ -1249,7 +1294,6 @@ class Library {
                     image.y = Math.max(0, Math.min(85, baseY + dy));
                     node.style.left = `${image.x}%`;
                     node.style.top = `${image.y}%`;
-                    this.dirty = true;
                 };
 
                 const up = () => {
@@ -1308,8 +1352,9 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.updateImage(page.id, image.id, image);
-            this.pages[this.activePageIndex] = updated;
-            this.dirty = false;
+            this.replacePage(updated);
+            this.pageDirty = false;
+            this.refreshDirty();
             this.renderOpenBook();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao salvar imagem.");
@@ -1321,9 +1366,10 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.deleteImage(page.id, imageId);
-            this.pages[this.activePageIndex] = updated;
+            this.replacePage(updated);
             this.zoomImage = null;
-            this.dirty = false;
+            this.pageDirty = false;
+            this.refreshDirty();
             this.renderOpenBook();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao remover imagem.");
@@ -1399,7 +1445,7 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.deleteNote(page.id, noteId);
-            this.pages[this.activePageIndex] = updated;
+            this.replacePage(updated);
             this.renderOpenBook();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao remover nota.");
@@ -1420,6 +1466,17 @@ class Library {
 
     }
 
+    replacePage(updatedPage) {
+
+        if (!updatedPage?.id) return;
+
+        const index = this.pages.findIndex(page => page.id === updatedPage.id);
+        if (index >= 0) {
+            this.pages[index] = updatedPage;
+        }
+
+    }
+
     isTornPage(page) {
 
         return page?.torn === true || page?.torn === "true" || page?.torn === 1 || page?.torn === "1";
@@ -1430,7 +1487,16 @@ class Library {
 
         const page = this.currentPage();
         if (!page || this.isTornPage(page) || page.deleted) {
-            this.dirty = false;
+            this.pageDirty = false;
+            this.refreshDirty();
+            return true;
+        }
+
+        if (!this.pageDirty && !this.hasPageChanges(page)) return true;
+
+        if (!MC.Services.Library.canEditPage(page)) {
+            this.pageDirty = false;
+            this.refreshDirty();
             return true;
         }
 
@@ -1448,18 +1514,10 @@ class Library {
                 await MC.UI.alert("Nao foi possivel salvar todas as paginas.");
                 return;
             }
-            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, {
-                title: this.byId("library-edit-title")?.value.trim() || this.activeBook.title,
-                seal: this.byId("library-edit-seal")?.value || this.activeBook.seal,
-                fontFamily: this.byId("library-edit-font")?.value || this.activeBook.fontFamily,
-                textColor: this.byId("library-edit-color")?.value || this.activeBook.textColor,
-                coverColor: this.byId("library-cover-color")?.value || this.activeBook.coverColor,
-                coverBorderColor: this.byId("library-cover-border")?.value || this.activeBook.coverBorderColor,
-                pageStyle: this.byId("library-page-style")?.value || this.activeBook.pageStyle,
-                pageColor: this.byId("library-page-color")?.value || this.activeBook.pageColor,
-                password: this.byId("library-edit-password")?.value.trim() || ""
-            });
-            this.dirty = false;
+            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, this.bookSavePayload());
+            this.bookDirty = false;
+            this.pageDirty = false;
+            this.refreshDirty();
             await this.loadBooks();
             this.renderOpenBook();
         } catch (err) {
@@ -1485,6 +1543,7 @@ class Library {
     async addPage() {
 
         if (!this.activeBook) return;
+        if (!await this.saveBeforePageNavigation()) return;
 
         try {
             const page = await MC.Services.Library.createPage(this.activeBook.id, {
@@ -1493,7 +1552,8 @@ class Library {
             });
             this.pages = await MC.Services.Library.findPages(this.activeBook.id);
             this.activePageIndex = this.pages.findIndex(entry => entry.id === page.id);
-            this.dirty = false;
+            this.pageDirty = false;
+            this.refreshDirty();
             this.renderOpenBook();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao criar pagina.");
@@ -1506,14 +1566,21 @@ class Library {
         const page = this.currentPage();
         if (!page) return true;
         if (this.isTornPage(page) || page.deleted) {
-            this.dirty = false;
+            this.pageDirty = false;
+            this.refreshDirty();
+            return true;
+        }
+        if (!MC.Services.Library.canEditPage(page)) {
+            this.pageDirty = false;
+            this.refreshDirty();
             return true;
         }
 
         try {
             const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page));
-            this.pages[this.activePageIndex] = updated;
-            this.dirty = false;
+            this.replacePage(updated);
+            this.pageDirty = false;
+            this.refreshDirty();
             if (options.render !== false) this.renderOpenBook();
             return true;
         } catch (err) {
@@ -1531,7 +1598,7 @@ class Library {
         const currentPageNumber = current?.pageNumber;
         const currentPageId = current?.id;
 
-        if (current && !this.isTornPage(current) && !current.deleted) {
+        if (current && !this.isTornPage(current) && !current.deleted && this.hasPageChanges(current)) {
             const saved = await this.savePage({ silent: options.silent, render: false });
             if (!saved) return false;
         }
@@ -1545,7 +1612,8 @@ class Library {
             this.activePageIndex = Math.max(0, nextIndex);
         }
 
-        this.dirty = false;
+        this.pageDirty = false;
+        this.refreshDirty();
         return true;
 
     }
@@ -1570,6 +1638,65 @@ class Library {
     
     }
 
+    hasPageChanges(page) {
+
+        if (!page || this.isTornPage(page) || page.deleted) return false;
+        if (!MC.Services.Library.canEditPage(page)) return false;
+
+        const payload = this.pageSavePayload(page);
+        const comparable = key => JSON.stringify(payload[key] ?? null) !== JSON.stringify(page[key] ?? null);
+
+        return [
+            "title",
+            "content",
+            "drawings",
+            "images",
+            "notes",
+            "references",
+            "highlightWords",
+            "pageStyle",
+            "pageColor"
+        ].some(comparable);
+
+    }
+
+    bookSavePayload() {
+
+        const book = this.activeBook || {};
+        const textValue = (id, fallback = "") => {
+            const el = this.byId(id);
+            if (!el) return fallback;
+            const value = String(el.value ?? "").trim();
+            return value || fallback;
+        };
+        const rawValue = (id, fallback = "") => {
+            const el = this.byId(id);
+            if (!el) return fallback;
+            const value = String(el.value ?? "");
+            return value || fallback;
+        };
+
+        return {
+            title: textValue("library-edit-title", book.title),
+            seal: rawValue("library-edit-seal", book.seal),
+            fontFamily: rawValue("library-edit-font", book.fontFamily),
+            textColor: rawValue("library-edit-color", book.textColor),
+            coverColor: rawValue("library-cover-color", book.coverColor),
+            coverBorderColor: rawValue("library-cover-border", book.coverBorderColor),
+            pageStyle: rawValue("library-page-style", book.pageStyle),
+            pageColor: rawValue("library-page-color", book.pageColor),
+            password: this.byId("library-edit-password") ? String(this.byId("library-edit-password").value ?? "").trim() : (book.password || "")
+        };
+
+    }
+
+    hasBookChanges(payload = {}) {
+
+        const book = this.activeBook || {};
+        return Object.entries(payload).some(([key, value]) => String(value ?? "") !== String(book[key] ?? ""));
+
+    }
+
     async saveBeforeLeavingBook() {
 
         if (!this.activeBook) return true;
@@ -1580,19 +1707,23 @@ class Library {
             return false;
         }
 
+        if (!MC.Services.Library.canManageBook(this.activeBook)) {
+            this.bookDirty = false;
+            this.refreshDirty();
+            return true;
+        }
+
+        const payload = this.bookSavePayload();
+        if (!this.hasBookChanges(payload)) {
+            this.bookDirty = false;
+            this.refreshDirty();
+            return true;
+        }
+
         try {
-            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, {
-                title: this.byId("library-edit-title")?.value.trim() || this.activeBook.title,
-                seal: this.byId("library-edit-seal")?.value || this.activeBook.seal,
-                fontFamily: this.byId("library-edit-font")?.value || this.activeBook.fontFamily,
-                textColor: this.byId("library-edit-color")?.value || this.activeBook.textColor,
-                coverColor: this.byId("library-cover-color")?.value || this.activeBook.coverColor,
-                coverBorderColor: this.byId("library-cover-border")?.value || this.activeBook.coverBorderColor,
-                pageStyle: this.byId("library-page-style")?.value || this.activeBook.pageStyle,
-                pageColor: this.byId("library-page-color")?.value || this.activeBook.pageColor,
-                password: this.byId("library-edit-password")?.value.trim() || ""
-            });
-            this.dirty = false;
+            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, payload);
+            this.bookDirty = false;
+            this.refreshDirty();
             await this.loadBooks();
             return true;
         } catch (err) {
@@ -1608,8 +1739,9 @@ class Library {
         if (!this.activeBook || !page || !await MC.UI.confirm("Arrancar esta pagina? A marca ficara no livro.")) return;
 
         try {
-            this.pages[this.activePageIndex] = await MC.Services.Library.tearPage(this.activeBook.id, page.id);
-            this.dirty = false;
+            this.replacePage(await MC.Services.Library.tearPage(this.activeBook.id, page.id));
+            this.pageDirty = false;
+            this.refreshDirty();
             this.renderOpenBook();
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao arrancar pagina.");
@@ -1652,7 +1784,10 @@ class Library {
         }
 
         this.activePageIndex = index;
-        this.drawingRedoStack = [];
+        this.drawing = false;
+        this.erasing = false;
+        this.currentLine = null;
+        this.eraseBeforeSnapshot = null;
         this.renderOpenBook();
 
     }
@@ -1685,7 +1820,7 @@ class Library {
         const color = this.byId("library-text-color")?.value || "#000000";
         this.restoreEditorSelection();
         document.execCommand("foreColor", false, color);
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1706,7 +1841,7 @@ class Library {
             selection.removeAllRanges();
             selection.selectAllChildren(span);
             this.savedSelection = selection.getRangeAt(0).cloneRange();
-            this.dirty = true;
+            this.markPageDirty();
         }
 
     }
@@ -1731,7 +1866,7 @@ class Library {
         }
 
         this.byId("library-selection-font").value = "";
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1742,7 +1877,7 @@ class Library {
         this.restoreEditorSelection();
         this.wrapSelectionWithStyle({ fontSize: size });
         this.byId("library-selection-size").value = "";
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1777,7 +1912,7 @@ class Library {
             document.execCommand(button.dataset.command, false, null);
         }
 
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1882,8 +2017,6 @@ class Library {
 
         this.pushDrawingHistory(page);
         page.drawings = [];
-        this.drawingRedoStack = [];
-        this.dirty = true;
         await this.saveDrawings(page);
         this.renderOpenBook();
 
@@ -1892,7 +2025,7 @@ class Library {
     applyHighlightsFromInput() {
 
         this.applyHighlights(this.parseWords(this.byId("library-highlight-words")?.value || ""));
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1926,7 +2059,7 @@ class Library {
         page.highlightWords = [];
         this.set("library-highlight-words", "");
         editor.innerHTML = this.stripHighlightMarkup(editor.innerHTML);
-        this.dirty = true;
+        this.markPageDirty();
 
     }
 
@@ -1944,7 +2077,7 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.addImage(page.id, { url });
-            this.pages[this.activePageIndex] = updated;
+            this.replacePage(updated);
             this.set("library-image-url", "");
             this.renderOpenBook();
         } catch (err) {
@@ -1961,7 +2094,7 @@ class Library {
 
         try {
             const updated = await MC.Services.Library.addAnonymousNote(page.id, { text });
-            this.pages[this.activePageIndex] = updated;
+            this.replacePage(updated);
             this.set("library-note-text", "");
             this.renderOpenBook();
         } catch (err) {
@@ -1989,7 +2122,7 @@ class Library {
             { label, bookId, pageNumber }
         ];
         this.clear(["library-ref-label", "library-ref-book", "library-ref-page"]);
-        this.dirty = true;
+        this.markPageDirty();
         this.renderOpenBook();
 
     }
@@ -2017,6 +2150,52 @@ class Library {
             .split(",")
             .map(word => word.trim())
             .filter(Boolean);
+
+    }
+
+    trackReaderDirty(event) {
+
+        const target = event.target;
+        if (!target?.closest?.("#library-reader")) return;
+
+        const bookFields = new Set([
+            "library-edit-title",
+            "library-edit-seal",
+            "library-edit-font",
+            "library-edit-color",
+            "library-cover-color",
+            "library-cover-border",
+            "library-page-style",
+            "library-page-color",
+            "library-edit-password"
+        ]);
+
+        if (bookFields.has(target.id)) {
+            this.markBookDirty();
+            return;
+        }
+
+        this.markPageDirty();
+
+    }
+
+    markBookDirty() {
+
+        this.bookDirty = true;
+        this.refreshDirty();
+
+    }
+
+    markPageDirty() {
+
+        this.pageDirty = true;
+        this.refreshDirty();
+
+    }
+
+    refreshDirty() {
+
+        this.dirty = this.bookDirty || this.pageDirty;
 
     }
 
