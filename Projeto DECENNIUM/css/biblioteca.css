@@ -412,9 +412,8 @@
 }
 
 .library-paper.page-style-custom{
-    background:
-        linear-gradient(90deg, rgba(92,56,26,.09), transparent 8%, transparent 92%, rgba(92,56,26,.09)),
-        var(--library-page-color, #d8c49c);
+    background:var(--library-page-color, #d8c49c);
+    box-shadow:none;
 }
 
 .library-paper.drawing-mode{
