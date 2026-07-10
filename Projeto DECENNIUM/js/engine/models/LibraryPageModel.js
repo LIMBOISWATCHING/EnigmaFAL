@@ -18,6 +18,8 @@ class LibraryPageModel extends BaseModel {
         this.notes = Array.isArray(data.notes) ? data.notes : [];
         this.references = Array.isArray(data.references) ? data.references : [];
         this.highlightWords = Array.isArray(data.highlightWords) ? data.highlightWords : [];
+        this.pageStyle = data.pageStyle ?? "";
+        this.pageColor = data.pageColor ?? "";
         this.torn = data.torn ?? false;
         this.tornBy = data.tornBy ?? null;
         this.deleted = data.deleted ?? false;
@@ -39,6 +41,8 @@ class LibraryPageModel extends BaseModel {
             notes: this.notes,
             references: this.references,
             highlightWords: this.highlightWords,
+            pageStyle: this.pageStyle,
+            pageColor: this.pageColor,
             torn: this.torn,
             tornBy: this.tornBy,
             deleted: this.deleted
