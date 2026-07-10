@@ -194,6 +194,38 @@
                 </div>
                 <input id="library-text-color" class="library-input" type="color" value="#1b130d">
                 <button id="library-apply-color" class="library-btn ghost" type="button">Cor do Texto</button>
+                <div class="library-drawing-toolbar">
+                    <button id="library-drawing-undo" class="library-format-btn" type="button" title="Desfazer desenho">Voltar</button>
+                    <button id="library-drawing-redo" class="library-format-btn" type="button" title="Refazer desenho">Refazer</button>
+                    <select id="library-drawing-tool" class="library-input">
+                        <option value="pen">Lapiz</option>
+                        <option value="bucket">Balde</option>
+                        <option value="eyedropper">Conta gotas</option>
+                    </select>
+                    <select id="library-pen-type" class="library-input">
+                        <option value="normal">Normal</option>
+                        <option value="thin">Fino</option>
+                        <option value="marker">Marcador</option>
+                        <option value="brush">Pincel</option>
+                        <option value="scratch">Riscado</option>
+                    </select>
+                    <label class="library-drawing-range">
+                        <span>Tamanho</span>
+                        <input id="library-brush-size" type="range" min="1" max="36" value="3">
+                    </label>
+                    <label class="library-drawing-range">
+                        <span>Opacidade</span>
+                        <input id="library-brush-opacity" type="range" min="10" max="100" value="100">
+                    </label>
+                    <label class="library-drawing-range">
+                        <span>Borracha</span>
+                        <input id="library-eraser-size" type="range" min="8" max="80" value="26">
+                    </label>
+                    <label class="library-drawing-range">
+                        <span>Balde</span>
+                        <input id="library-fill-opacity" type="range" min="5" max="70" value="16">
+                    </label>
+                </div>
                 <button id="library-toggle-drawing" class="library-btn ghost" type="button">Modo Desenho</button>
                 <button id="library-toggle-uv-drawing" class="library-btn ghost" type="button">Desenho UV</button>
                 <button id="library-apply-uv-text" class="library-btn ghost" type="button">Texto UV</button>

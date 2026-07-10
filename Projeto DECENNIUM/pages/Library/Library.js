@@ -26,6 +26,7 @@ class Library {
         this.zoomOffset = { x: 0, y: 0 };
         this.uvLightOn = false;
         this.uvDrawingMode = false;
+        this.drawingRedoStack = [];
 
     }
 
@@ -86,6 +87,8 @@ class Library {
             this.dirty = true;
         });
         this.byId("library-toggle-drawing")?.addEventListener("click", () => this.toggleDrawingMode());
+        this.byId("library-drawing-undo")?.addEventListener("click", () => this.undoDrawing());
+        this.byId("library-drawing-redo")?.addEventListener("click", () => this.redoDrawing());
         this.byId("library-toggle-uv-drawing")?.addEventListener("click", () => this.toggleUvDrawingMode());
         this.byId("library-apply-uv-text")?.addEventListener("mousedown", event => event.preventDefault());
         this.byId("library-apply-uv-text")?.addEventListener("click", () => this.applyUvText());
@@ -521,13 +524,30 @@ class Library {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         (page.drawings || []).forEach(line => {
+            if (line.uv && !this.uvLightOn) return;
+            if (line.type === "fill") {
+                ctx.save();
+                ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
+                ctx.globalAlpha = Number(line.opacity ?? .18);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+                return;
+            }
             if (line.type !== "line" || !line.points?.length) return;
             if (line.uv && !this.uvLightOn) return;
             ctx.strokeStyle = line.uv ? "rgba(183, 120, 255, .95)" : (line.color || "#000");
             ctx.shadowColor = line.uv ? "rgba(183, 120, 255, .75)" : "transparent";
             ctx.shadowBlur = line.uv ? 10 : 0;
             ctx.lineWidth = Number(line.size || 3);
-            ctx.lineCap = "round";
+            ctx.lineCap = line.penType === "marker" ? "square" : "round";
+            ctx.lineJoin = "round";
+            ctx.globalAlpha = Number(line.opacity ?? 1);
+            if (line.penType === "scratch") ctx.setLineDash([8, 6]);
+            else ctx.setLineDash([]);
+            if (line.penType === "brush" && !line.uv) {
+                ctx.shadowColor = line.color || "#000";
+                ctx.shadowBlur = 2;
+            }
             ctx.beginPath();
             line.points.forEach((point, index) => {
                 if (index === 0) ctx.moveTo(point.x, point.y);
@@ -535,6 +555,8 @@ class Library {
             });
             ctx.stroke();
             ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+            ctx.setLineDash([]);
         });
 
     }
@@ -549,6 +571,16 @@ class Library {
             event.preventDefault();
             canvas.setPointerCapture?.(event.pointerId);
 
+            const tool = this.byId("library-drawing-tool")?.value || "pen";
+            if (tool === "eyedropper") {
+                this.pickDrawingColor(canvas, event, page);
+                return;
+            }
+            if (tool === "bucket") {
+                this.fillDrawingPage(page);
+                return;
+            }
+
             if (this.eraserMode) {
                 this.erasing = true;
                 this.eraseLineAt(canvas, event, page);
@@ -556,7 +588,7 @@ class Library {
             }
 
             this.drawing = true;
-            this.currentLine = { type: "line", color: this.byId("library-text-color")?.value || "#000", size: 3, uv: this.uvDrawingMode, points: [] };
+            this.currentLine = this.createDrawingLine();
             this.addLinePoint(canvas, event);
         });
 
@@ -579,11 +611,13 @@ class Library {
             if (this.erasing) {
                 this.erasing = false;
                 this.dirty = true;
+                this.drawingRedoStack = [];
                 this.saveDrawings(page);
                 return;
             }
             if (!this.drawing || !this.currentLine) return;
             page.drawings = [...(page.drawings || []), this.currentLine];
+            this.drawingRedoStack = [];
             this.currentLine = null;
             this.drawing = false;
             this.dirty = true;
@@ -599,25 +633,135 @@ class Library {
 
     }
 
-    eraseLineAt(canvas, event, page) {
+    createDrawingLine() {
 
-        const rect = canvas.getBoundingClientRect();
-        const point = {
-            x: Math.round((event.clientX - rect.left) / rect.width * canvas.width),
-            y: Math.round((event.clientY - rect.top) / rect.height * canvas.height)
+        const penType = this.byId("library-pen-type")?.value || "normal";
+        const brushSize = this.num("library-brush-size", 3);
+        const brushOpacity = this.num("library-brush-opacity", 100) / 100;
+        const presets = {
+            thin: { size: Math.max(1, brushSize * .5), opacity: brushOpacity },
+            normal: { size: brushSize, opacity: brushOpacity },
+            marker: { size: Math.max(4, brushSize * 1.8), opacity: Math.min(.5, brushOpacity) },
+            brush: { size: Math.max(3, brushSize * 1.35), opacity: Math.min(.85, brushOpacity) },
+            scratch: { size: Math.max(1, brushSize * .75), opacity: brushOpacity }
         };
-        const radius = 26;
-        const before = (page.drawings || []).length;
+        const preset = presets[penType] || presets.normal;
 
-        page.drawings = (page.drawings || []).filter(line => {
-            return !(line.points || []).some(linePoint => {
-                const dx = Number(linePoint.x || 0) - point.x;
-                const dy = Number(linePoint.y || 0) - point.y;
-                return Math.sqrt(dx * dx + dy * dy) <= radius;
+        return {
+            type: "line",
+            color: this.byId("library-text-color")?.value || "#000",
+            size: preset.size,
+            opacity: preset.opacity,
+            penType,
+            uv: this.uvDrawingMode,
+            points: []
+        };
+
+    }
+
+    async fillDrawingPage(page) {
+
+        if (!page) return;
+
+        const fill = {
+            type: "fill",
+            color: this.byId("library-text-color")?.value || "#000",
+            opacity: this.uvDrawingMode ? .22 : this.num("library-fill-opacity", 16) / 100,
+            uv: this.uvDrawingMode,
+            createdAt: new Date().toISOString()
+        };
+
+        page.drawings = [...(page.drawings || []), fill];
+        this.drawingRedoStack = [];
+        this.dirty = true;
+        this.drawExistingLines(page);
+        await this.saveDrawings(page);
+
+    }
+
+    pickDrawingColor(canvas, event, page) {
+
+        const point = this.eventToCanvasPoint(canvas, event);
+        const nearest = [...(page.drawings || [])].reverse().find(line => {
+            if (line.type === "fill") return true;
+            return (line.points || []).some(p => {
+                const dx = Number(p.x || 0) - point.x;
+                const dy = Number(p.y || 0) - point.y;
+                return Math.sqrt(dx * dx + dy * dy) <= 24;
             });
         });
 
-        if (page.drawings.length !== before) {
+        if (nearest?.color) this.set("library-text-color", nearest.color);
+
+    }
+
+    async undoDrawing() {
+
+        const page = this.currentPage();
+        if (!page || this.isTornPage(page)) return;
+
+        const drawings = [...(page.drawings || [])];
+        const removed = drawings.pop();
+        if (!removed) return;
+
+        page.drawings = drawings;
+        this.drawingRedoStack.push(removed);
+        this.dirty = true;
+        this.drawExistingLines(page);
+        await this.saveDrawings(page);
+
+    }
+
+    async redoDrawing() {
+
+        const page = this.currentPage();
+        if (!page || this.isTornPage(page)) return;
+
+        const restored = this.drawingRedoStack.pop();
+        if (!restored) return;
+
+        page.drawings = [...(page.drawings || []), restored];
+        this.dirty = true;
+        this.drawExistingLines(page);
+        await this.saveDrawings(page);
+
+    }
+
+    eraseLineAt(canvas, event, page) {
+
+        const point = this.eventToCanvasPoint(canvas, event);
+        const radius = this.num("library-eraser-size", 26);
+        const before = JSON.stringify(page.drawings || []);
+
+        page.drawings = (page.drawings || []).flatMap(line => {
+            if (line.type !== "line" || !Array.isArray(line.points)) return [line];
+
+            const fragments = [];
+            let current = [];
+
+            line.points.forEach(linePoint => {
+                const dx = Number(linePoint.x || 0) - point.x;
+                const dy = Number(linePoint.y || 0) - point.y;
+                const insideEraser = Math.sqrt(dx * dx + dy * dy) <= radius;
+
+                if (insideEraser) {
+                    if (current.length > 1) fragments.push(current);
+                    current = [];
+                    return;
+                }
+
+                current.push(linePoint);
+            });
+
+            if (current.length > 1) fragments.push(current);
+
+            return fragments.map(fragment => ({
+                ...line,
+                points: fragment
+            }));
+        });
+
+        if (JSON.stringify(page.drawings || []) !== before) {
             this.dirty = true;
             this.drawExistingLines(page);
         }
@@ -637,11 +781,17 @@ class Library {
 
     addLinePoint(canvas, event) {
 
+        this.currentLine.points.push(this.eventToCanvasPoint(canvas, event));
+
+    }
+
+    eventToCanvasPoint(canvas, event) {
+
         const rect = canvas.getBoundingClientRect();
-        this.currentLine.points.push({
+        return {
             x: Math.round((event.clientX - rect.left) / rect.width * canvas.width),
             y: Math.round((event.clientY - rect.top) / rect.height * canvas.height)
-        });
+        };
 
     }
 
@@ -1205,6 +1355,7 @@ class Library {
         }
 
         this.activePageIndex = index;
+        this.drawingRedoStack = [];
         this.renderOpenBook();
 
     }
@@ -1420,6 +1571,7 @@ class Library {
         if (!await MC.UI.confirm("Apagar todos os desenhos desta pagina?")) return;
 
         page.drawings = [];
+        this.drawingRedoStack = [];
         this.dirty = true;
         await this.saveDrawings(page);
         this.renderOpenBook();
@@ -1573,6 +1725,13 @@ class Library {
     clear(ids) {
 
         ids.forEach(id => this.set(id, ""));
+
+    }
+
+    num(id, fallback = 0) {
+
+        const value = Number(this.byId(id)?.value);
+        return Number.isFinite(value) ? value : fallback;
 
     }
 
