@@ -77,6 +77,14 @@ class Library {
                 title.classList.toggle("empty", !event.target.value.trim());
             }
         });
+        this.byId("library-page-own-style")?.addEventListener("change", () => {
+            this.applyCurrentPageVisuals(this.currentPage(), true);
+            this.dirty = true;
+        });
+        this.byId("library-page-own-color")?.addEventListener("input", () => {
+            this.applyCurrentPageVisuals(this.currentPage(), true);
+            this.dirty = true;
+        });
         this.byId("library-toggle-drawing")?.addEventListener("click", () => this.toggleDrawingMode());
         this.byId("library-toggle-uv-drawing")?.addEventListener("click", () => this.toggleUvDrawingMode());
         this.byId("library-apply-uv-text")?.addEventListener("mousedown", event => event.preventDefault());
@@ -317,10 +325,6 @@ class Library {
 
         paper.style.fontFamily = book.fontFamily;
         paper.style.color = book.textColor;
-        paper.style.setProperty("--library-page-color", book.pageColor || "#d8c49c");
-        paper.classList.remove("page-style-a4", "page-style-middle", "page-style-aged", "page-style-custom");
-        paper.classList.add(`page-style-${book.pageStyle || "middle"}`);
-        paper.classList.toggle("uv-light-on", this.uvLightOn);
 
         if (!page) {
             paper.innerHTML = `
@@ -329,6 +333,7 @@ class Library {
                     <button id="library-first-page" class="library-btn" type="button">Escrever Primeira Pagina</button>
                 </div>
             `;
+            this.applyCurrentPageVisuals(null);
             this.byId("library-first-page")?.addEventListener("click", () => this.addPage());
             return;
         }
@@ -347,6 +352,9 @@ class Library {
 
         this.set("library-page-title", page.title || "");
         this.set("library-highlight-words", (page.highlightWords || []).join(", "));
+        this.set("library-page-own-style", page.pageStyle || "");
+        this.set("library-page-own-color", page.pageColor || book.pageColor || "#d8c49c");
+        this.applyCurrentPageVisuals(page);
         this.byId("library-page-title").disabled = !canEdit;
         this.byId("library-save-page").disabled = !canEdit;
         this.byId("library-tear-page").disabled = !canTear || pageTorn;
@@ -364,7 +372,9 @@ class Library {
             "library-ref-book",
             "library-ref-page",
             "library-ref-selection",
-            "library-add-ref"
+            "library-add-ref",
+            "library-page-own-style",
+            "library-page-own-color"
         ].forEach(entry => {
             const el = typeof entry === "string" ? this.byId(entry) : entry;
             if (el) el.disabled = !canEdit;
@@ -408,6 +418,30 @@ class Library {
                 <span></span>
             </div>
         `;
+
+    }
+
+    applyCurrentPageVisuals(page = this.currentPage(), fromControls = false) {
+
+        const paper = this.byId("library-page-view");
+        const book = this.activeBook;
+        if (!paper || !book) return;
+
+        const ownStyle = fromControls
+            ? (this.byId("library-page-own-style")?.value || "")
+            : (page?.pageStyle || "");
+        const ownColor = fromControls
+            ? (this.byId("library-page-own-color")?.value || "")
+            : (page?.pageColor || "");
+        const style = ownStyle || book.pageStyle || "middle";
+        const color = style === "custom"
+            ? (ownColor || page?.pageColor || book.pageColor || "#d8c49c")
+            : "#d8c49c";
+
+        paper.style.setProperty("--library-page-color", color);
+        paper.classList.remove("page-style-a4", "page-style-middle", "page-style-aged", "page-style-custom");
+        paper.classList.add(`page-style-${style}`);
+        paper.classList.toggle("uv-light-on", this.uvLightOn);
 
     }
 
@@ -1082,7 +1116,9 @@ class Library {
             images: page.images || [],
             notes: page.notes || [],
             references: page.references || [],
-            highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || "")
+            highlightWords: this.parseWords(this.byId("library-highlight-words")?.value || ""),
+            pageStyle: this.byId("library-page-own-style")?.value || "",
+            pageColor: this.byId("library-page-own-color")?.value || ""
         };
     
     }
@@ -1349,7 +1385,9 @@ class Library {
         this.uvLightOn = !this.uvLightOn;
         const button = this.byId("library-uv-light");
         if (button) button.classList.toggle("active", this.uvLightOn);
-        this.renderOpenBook();
+        const paper = this.byId("library-page-view");
+        paper?.classList.toggle("uv-light-on", this.uvLightOn);
+        this.drawExistingLines(this.currentPage() || { drawings: [] });
 
     }
 
