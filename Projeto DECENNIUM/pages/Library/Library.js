@@ -28,6 +28,8 @@ class Library {
         this.uvDrawingMode = false;
         this.uvSpot = null;
         this.drawingRedoStack = [];
+        this.drawingUndoStack = [];
+        this.eraseBeforeSnapshot = null;
 
     }
 
@@ -90,6 +92,9 @@ class Library {
         this.byId("library-toggle-drawing")?.addEventListener("click", () => this.toggleDrawingMode());
         this.byId("library-drawing-undo")?.addEventListener("click", () => this.undoDrawing());
         this.byId("library-drawing-redo")?.addEventListener("click", () => this.redoDrawing());
+        ["library-brush-size", "library-eraser-size", "library-drawing-color", "library-brush-opacity"].forEach(id => {
+            this.byId(id)?.addEventListener("input", () => this.updateDrawingCursor());
+        });
         this.byId("library-toggle-uv-drawing")?.addEventListener("click", () => this.toggleUvDrawingMode());
         this.byId("library-apply-uv-text")?.addEventListener("mousedown", event => event.preventDefault());
         this.byId("library-apply-uv-text")?.addEventListener("click", () => this.applyUvText());
@@ -456,6 +461,7 @@ class Library {
             <h3 id="library-paper-title" class="library-written-page-title ${page.title ? "" : "empty"}" contenteditable="${canEdit ? "true" : "false"}">${this.esc(page.title || "")}</h3>
             <div id="library-editor" class="book-page-editor" contenteditable="${canEdit ? "true" : "false"}">${page.content || ""}</div>
             <canvas id="library-drawing-canvas" class="library-drawing-canvas" width="900" height="1120"></canvas>
+            <div id="library-drawing-cursor" class="library-drawing-cursor"></div>
             <div id="library-image-layer" class="library-image-layer">
                 ${(page.images || []).map(image => this.renderImage(page, image)).join("")}
             </div>
@@ -720,10 +726,21 @@ class Library {
 
     }
 
+    hexToRgbaCss(color, opacity = 1) {
+
+        const [r, g, b, a] = this.colorToRgba(color, opacity);
+        return `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`;
+
+    }
+
     bindCanvas(page, canDraw) {
 
         const canvas = this.byId("library-drawing-canvas");
         if (!canvas || !canDraw) return;
+
+        canvas.addEventListener("pointerenter", event => this.moveDrawingCursor(canvas, event));
+        canvas.addEventListener("pointerleave", () => this.hideDrawingCursor());
+        canvas.addEventListener("pointermove", event => this.moveDrawingCursor(canvas, event));
 
         canvas.addEventListener("pointerdown", event => {
             if (!this.drawingMode) return;
@@ -742,6 +759,8 @@ class Library {
 
             if (this.eraserMode) {
                 this.erasing = true;
+                this.pushDrawingHistory(page);
+                this.drawingRedoStack = [];
                 this.eraseLineAt(canvas, event, page);
                 return;
             }
@@ -770,11 +789,11 @@ class Library {
             if (this.erasing) {
                 this.erasing = false;
                 this.dirty = true;
-                this.drawingRedoStack = [];
                 this.saveDrawings(page);
                 return;
             }
             if (!this.drawing || !this.currentLine) return;
+            this.pushDrawingHistory(page);
             page.drawings = [...(page.drawings || []), this.currentLine];
             this.drawingRedoStack = [];
             this.currentLine = null;
@@ -789,6 +808,60 @@ class Library {
             this.erasing = false;
             this.drawing = false;
         });
+
+    }
+
+    moveDrawingCursor(canvas, event) {
+
+        const cursor = this.byId("library-drawing-cursor");
+        const paper = this.byId("library-page-view");
+        if (!cursor || !paper) return;
+
+        if (!this.drawingMode) {
+            this.hideDrawingCursor();
+            return;
+        }
+
+        const rect = paper.getBoundingClientRect();
+        cursor.dataset.active = "1";
+        cursor.style.left = `${event.clientX - rect.left}px`;
+        cursor.style.top = `${event.clientY - rect.top}px`;
+        this.updateDrawingCursor();
+
+    }
+
+    updateDrawingCursor() {
+
+        const cursor = this.byId("library-drawing-cursor");
+        if (!cursor) return;
+
+        if (!this.drawingMode) {
+            this.hideDrawingCursor();
+            return;
+        }
+
+        const size = this.eraserMode
+            ? this.num("library-eraser-size", 26)
+            : this.num("library-brush-size", 3);
+        const opacity = this.eraserMode ? .26 : Math.max(.12, this.num("library-brush-opacity", 100) / 100);
+        const color = this.eraserMode ? "#ff6666" : (this.byId("library-drawing-color")?.value || "#000000");
+
+        cursor.classList.toggle("eraser", this.eraserMode);
+        cursor.style.width = `${Math.max(2, size)}px`;
+        cursor.style.height = `${Math.max(2, size)}px`;
+        cursor.style.borderColor = this.eraserMode ? "#ff7777" : color;
+        cursor.style.background = this.eraserMode ? "rgba(255,80,80,.12)" : this.hexToRgbaCss(color, opacity * .22);
+        cursor.style.display = cursor.dataset.active === "1" ? "block" : "none";
+
+    }
+
+    hideDrawingCursor() {
+
+        const cursor = this.byId("library-drawing-cursor");
+        if (cursor) {
+            cursor.dataset.active = "0";
+            cursor.style.display = "none";
+        }
 
     }
 
@@ -836,6 +909,7 @@ class Library {
         fill.spans = this.buildFloodFillSpans(canvas.getContext("2d"), canvas, fill);
         if (!fill.spans.length) return;
 
+        this.pushDrawingHistory(page);
         page.drawings = [...(page.drawings || []), fill];
         this.drawingRedoStack = [];
         this.dirty = true;
@@ -848,7 +922,14 @@ class Library {
 
         const point = this.eventToCanvasPoint(canvas, event);
         const nearest = [...(page.drawings || [])].reverse().find(line => {
-            if (line.type === "fill") return true;
+            if (line.type === "fill") {
+                return (line.spans || []).some(span => {
+                    const [y, x1, x2] = span;
+                    return Math.abs(Number(y || 0) - point.y) <= 1
+                        && point.x >= Number(x1 || 0)
+                        && point.x <= Number(x2 || 0);
+                });
+            }
             return (line.points || []).some(p => {
                 const dx = Number(p.x || 0) - point.x;
                 const dy = Number(p.y || 0) - point.y;
@@ -856,7 +937,10 @@ class Library {
             });
         });
 
-        if (nearest?.color) this.set("library-drawing-color", nearest.color);
+        if (nearest?.color) {
+            this.set("library-drawing-color", nearest.color);
+            this.updateDrawingCursor();
+        }
 
     }
 
@@ -865,12 +949,11 @@ class Library {
         const page = this.currentPage();
         if (!page || this.isTornPage(page)) return;
 
-        const drawings = [...(page.drawings || [])];
-        const removed = drawings.pop();
-        if (!removed) return;
+        const previous = this.drawingUndoStack.pop();
+        if (!previous) return;
 
-        page.drawings = drawings;
-        this.drawingRedoStack.push(removed);
+        this.drawingRedoStack.push(this.snapshotDrawings(page));
+        this.restoreDrawingsSnapshot(page, previous);
         this.dirty = true;
         this.drawExistingLines(page);
         await this.saveDrawings(page);
@@ -882,10 +965,11 @@ class Library {
         const page = this.currentPage();
         if (!page || this.isTornPage(page)) return;
 
-        const restored = this.drawingRedoStack.pop();
-        if (!restored) return;
+        const next = this.drawingRedoStack.pop();
+        if (!next) return;
 
-        page.drawings = [...(page.drawings || []), restored];
+        this.drawingUndoStack.push(this.snapshotDrawings(page));
+        this.restoreDrawingsSnapshot(page, next);
         this.dirty = true;
         this.drawExistingLines(page);
         await this.saveDrawings(page);
@@ -966,6 +1050,29 @@ class Library {
         } catch (err) {
             await MC.UI.alert(err.message || "Erro ao salvar desenho.");
         }
+
+    }
+
+    snapshotDrawings(page) {
+
+        return JSON.stringify(page?.drawings || []);
+
+    }
+
+    restoreDrawingsSnapshot(page, snapshot) {
+
+        try {
+            page.drawings = JSON.parse(snapshot || "[]");
+        } catch (_err) {
+            page.drawings = [];
+        }
+
+    }
+
+    pushDrawingHistory(page) {
+
+        this.drawingUndoStack.push(this.snapshotDrawings(page));
+        if (this.drawingUndoStack.length > 60) this.drawingUndoStack.shift();
 
     }
 
@@ -1710,6 +1817,7 @@ class Library {
         this.drawingMode = !this.drawingMode;
         if (!this.drawingMode) this.eraserMode = false;
         this.syncDrawingButtons();
+        this.updateDrawingCursor();
 
     }
 
@@ -1718,6 +1826,7 @@ class Library {
         this.uvDrawingMode = !this.uvDrawingMode;
         if (this.uvDrawingMode) this.drawingMode = true;
         this.syncDrawingButtons();
+        this.updateDrawingCursor();
 
     }
 
@@ -1746,6 +1855,7 @@ class Library {
         this.eraserMode = !this.eraserMode;
         if (this.eraserMode) this.drawingMode = true;
         this.syncDrawingButtons();
+        this.updateDrawingCursor();
 
     }
 
@@ -1760,6 +1870,7 @@ class Library {
         if (uvDrawing) uvDrawing.classList.toggle("active", this.uvDrawingMode);
         const eraser = this.byId("library-toggle-eraser");
         if (eraser) eraser.classList.toggle("active", this.eraserMode);
+        if (!this.drawingMode) this.hideDrawingCursor();
 
     }
 
@@ -1769,6 +1880,7 @@ class Library {
         if (!page || this.isTornPage(page)) return;
         if (!await MC.UI.confirm("Apagar todos os desenhos desta pagina?")) return;
 
+        this.pushDrawingHistory(page);
         page.drawings = [];
         this.drawingRedoStack = [];
         this.dirty = true;
