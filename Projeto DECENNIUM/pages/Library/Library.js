@@ -556,7 +556,9 @@ class Library {
                     ctx.restore();
                     return;
                 }
-                if (Number.isFinite(Number(line.x)) && Number.isFinite(Number(line.y))) {
+                if (Array.isArray(line.spans) && line.spans.length) {
+                    this.drawFillSpans(ctx, line);
+                } else if (Number.isFinite(Number(line.x)) && Number.isFinite(Number(line.y))) {
                     this.floodFillCanvas(ctx, canvas, line);
                 } else {
                     ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
@@ -657,6 +659,76 @@ class Library {
         }
 
         ctx.putImageData(image, 0, 0);
+
+    }
+
+    buildFloodFillSpans(ctx, canvas, fill) {
+
+        const x = Math.max(0, Math.min(canvas.width - 1, Math.round(Number(fill.x || 0))));
+        const y = Math.max(0, Math.min(canvas.height - 1, Math.round(Number(fill.y || 0))));
+        const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = image.data;
+        const start = (y * canvas.width + x) * 4;
+        const target = [data[start], data[start + 1], data[start + 2], data[start + 3]];
+        const paint = this.colorToRgba(fill.uv ? "#b778ff" : (fill.color || "#000000"), Number(fill.opacity ?? .16));
+        const tolerance = 18;
+        const boundaryAlpha = 38;
+
+        if (!this.canFloodPixel(target, target, paint, tolerance, boundaryAlpha)) return [];
+
+        const stack = [[x, y]];
+        const visited = new Uint8Array(canvas.width * canvas.height);
+        const byRow = new Map();
+
+        while (stack.length) {
+            const [px, py] = stack.pop();
+            if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) continue;
+
+            const pixelIndex = py * canvas.width + px;
+            if (visited[pixelIndex]) continue;
+            visited[pixelIndex] = 1;
+
+            const offset = pixelIndex * 4;
+            const current = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+            if (!this.canFloodPixel(current, target, paint, tolerance, boundaryAlpha)) continue;
+
+            if (!byRow.has(py)) byRow.set(py, []);
+            byRow.get(py).push(px);
+
+            stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+        }
+
+        return [...byRow.entries()].flatMap(([row, xs]) => {
+            xs.sort((a, b) => a - b);
+            const spans = [];
+            let startX = xs[0];
+            let lastX = xs[0];
+
+            for (let i = 1; i < xs.length; i++) {
+                if (xs[i] === lastX + 1) {
+                    lastX = xs[i];
+                    continue;
+                }
+                spans.push([row, startX, lastX]);
+                startX = xs[i];
+                lastX = xs[i];
+            }
+
+            if (Number.isFinite(startX)) spans.push([row, startX, lastX]);
+            return spans;
+        });
+
+    }
+
+    drawFillSpans(ctx, fill) {
+
+        ctx.fillStyle = fill.uv ? "rgba(183, 120, 255, .18)" : (fill.color || "rgba(0,0,0,.08)");
+        ctx.globalAlpha = Number(fill.opacity ?? .18);
+
+        fill.spans.forEach(span => {
+            const [y, x1, x2] = span;
+            ctx.fillRect(x1, y, Math.max(1, x2 - x1 + 1), 1);
+        });
 
     }
 
@@ -802,12 +874,15 @@ class Library {
         const fill = {
             type: "fill",
             color: this.byId("library-drawing-color")?.value || "#000",
-            opacity: this.num("library-fill-opacity", 16) / 100,
+            opacity: this.num("library-brush-opacity", 100) / 100,
             x: point.x,
             y: point.y,
             uv: this.uvDrawingMode,
             createdAt: new Date().toISOString()
         };
+
+        fill.spans = this.buildFloodFillSpans(canvas.getContext("2d"), canvas, fill);
+        if (!fill.spans.length) return;
 
         page.drawings = [...(page.drawings || []), fill];
         this.drawingRedoStack = [];
