@@ -551,20 +551,13 @@ class Library {
         (page.drawings || []).forEach(line => {
             if (line.uv && !this.uvLightOn) return;
             if (line.type === "fill") {
+                if (!Array.isArray(line.spans) || !line.spans.length) return;
                 ctx.save();
                 if (line.uv && !this.applyUvCanvasClip(ctx, canvas)) {
                     ctx.restore();
                     return;
                 }
-                if (Array.isArray(line.spans) && line.spans.length) {
-                    this.drawFillSpans(ctx, line);
-                } else if (Number.isFinite(Number(line.x)) && Number.isFinite(Number(line.y))) {
-                    this.floodFillCanvas(ctx, canvas, line);
-                } else {
-                    ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
-                    ctx.globalAlpha = Number(line.opacity ?? .18);
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
+                this.drawFillSpans(ctx, line);
                 ctx.restore();
                 return;
             }
@@ -618,47 +611,6 @@ class Library {
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.clip();
         return true;
-
-    }
-
-    floodFillCanvas(ctx, canvas, fill) {
-
-        const x = Math.max(0, Math.min(canvas.width - 1, Math.round(Number(fill.x || 0))));
-        const y = Math.max(0, Math.min(canvas.height - 1, Math.round(Number(fill.y || 0))));
-        const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = image.data;
-        const start = (y * canvas.width + x) * 4;
-        const target = [data[start], data[start + 1], data[start + 2], data[start + 3]];
-        const paint = this.colorToRgba(fill.uv ? "#b778ff" : (fill.color || "#000000"), Number(fill.opacity ?? .16));
-        const tolerance = 18;
-        const boundaryAlpha = 38;
-
-        if (!this.canFloodPixel(target, target, paint, tolerance, boundaryAlpha)) return;
-
-        const stack = [[x, y]];
-        const visited = new Uint8Array(canvas.width * canvas.height);
-
-        while (stack.length) {
-            const [px, py] = stack.pop();
-            if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) continue;
-
-            const pixelIndex = py * canvas.width + px;
-            if (visited[pixelIndex]) continue;
-            visited[pixelIndex] = 1;
-
-            const offset = pixelIndex * 4;
-            const current = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
-            if (!this.canFloodPixel(current, target, paint, tolerance, boundaryAlpha)) continue;
-
-            data[offset] = paint[0];
-            data[offset + 1] = paint[1];
-            data[offset + 2] = paint[2];
-            data[offset + 3] = paint[3];
-
-            stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
-        }
-
-        ctx.putImageData(image, 0, 0);
 
     }
 
