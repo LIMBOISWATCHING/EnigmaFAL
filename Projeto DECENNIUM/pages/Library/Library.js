@@ -899,6 +899,11 @@ class Library {
         const before = JSON.stringify(page.drawings || []);
 
         page.drawings = (page.drawings || []).flatMap(line => {
+            if (line.type === "fill" && Array.isArray(line.spans)) {
+                const trimmed = line.spans.flatMap(span => this.eraseFillSpan(span, point, radius));
+                return trimmed.length ? [{ ...line, spans: trimmed }] : [];
+            }
+
             if (line.type !== "line" || !Array.isArray(line.points)) return [line];
 
             const fragments = [];
@@ -930,6 +935,26 @@ class Library {
             this.dirty = true;
             this.drawExistingLines(page);
         }
+
+    }
+
+    eraseFillSpan(span, point, radius) {
+
+        const [y, x1, x2] = span;
+        const dy = Number(y || 0) - point.y;
+
+        if (Math.abs(dy) > radius) return [span];
+
+        const dx = Math.sqrt(Math.max(0, radius * radius - dy * dy));
+        const cutStart = Math.max(Number(x1 || 0), Math.floor(point.x - dx));
+        const cutEnd = Math.min(Number(x2 || 0), Math.ceil(point.x + dx));
+
+        if (cutEnd < x1 || cutStart > x2) return [span];
+
+        const pieces = [];
+        if (cutStart > x1) pieces.push([y, x1, cutStart - 1]);
+        if (cutEnd < x2) pieces.push([y, cutEnd + 1, x2]);
+        return pieces;
 
     }
 
