@@ -16,6 +16,8 @@ class LibraryBookModel extends BaseModel {
         this.coverStyle = data.coverStyle ?? "dark";
         this.coverColor = data.coverColor ?? "#17100c";
         this.coverBorderColor = data.coverBorderColor ?? "#2d2118";
+        this.pageStyle = data.pageStyle ?? "middle";
+        this.pageColor = data.pageColor ?? "#d8c49c";
         this.seal = data.seal ?? "incompleto";
         this.password = data.password ?? "";
         this.references = Array.isArray(data.references) ? data.references : [];
@@ -36,6 +38,8 @@ class LibraryBookModel extends BaseModel {
             coverStyle: this.coverStyle,
             coverColor: this.coverColor,
             coverBorderColor: this.coverBorderColor,
+            pageStyle: this.pageStyle,
+            pageColor: this.pageColor,
             seal: this.seal,
             password: this.password,
             references: this.references,
