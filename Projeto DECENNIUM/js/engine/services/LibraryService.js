@@ -258,6 +258,8 @@ class LibraryService {
             notes: Array.isArray(data.notes) ? data.notes : page.notes,
             references: Array.isArray(data.references) ? data.references : page.references,
             highlightWords: Array.isArray(data.highlightWords) ? data.highlightWords : page.highlightWords,
+            pageStyle: data.pageStyle ?? page.pageStyle,
+            pageColor: data.pageColor ?? page.pageColor,
             pageNumber: Number(data.pageNumber || page.pageNumber)
         });
 
