@@ -556,9 +556,13 @@ class Library {
                     ctx.restore();
                     return;
                 }
-                ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
-                ctx.globalAlpha = Number(line.opacity ?? .18);
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (Number.isFinite(Number(line.x)) && Number.isFinite(Number(line.y))) {
+                    this.floodFillCanvas(ctx, canvas, line);
+                } else {
+                    ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
+                    ctx.globalAlpha = Number(line.opacity ?? .18);
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
                 ctx.restore();
                 return;
             }
@@ -615,6 +619,83 @@ class Library {
 
     }
 
+    floodFillCanvas(ctx, canvas, fill) {
+
+        const x = Math.max(0, Math.min(canvas.width - 1, Math.round(Number(fill.x || 0))));
+        const y = Math.max(0, Math.min(canvas.height - 1, Math.round(Number(fill.y || 0))));
+        const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = image.data;
+        const start = (y * canvas.width + x) * 4;
+        const target = [data[start], data[start + 1], data[start + 2], data[start + 3]];
+        const paint = this.colorToRgba(fill.uv ? "#b778ff" : (fill.color || "#000000"), Number(fill.opacity ?? .16));
+        const tolerance = 18;
+        const boundaryAlpha = 38;
+
+        if (!this.canFloodPixel(target, target, paint, tolerance, boundaryAlpha)) return;
+
+        const stack = [[x, y]];
+        const visited = new Uint8Array(canvas.width * canvas.height);
+
+        while (stack.length) {
+            const [px, py] = stack.pop();
+            if (px < 0 || py < 0 || px >= canvas.width || py >= canvas.height) continue;
+
+            const pixelIndex = py * canvas.width + px;
+            if (visited[pixelIndex]) continue;
+            visited[pixelIndex] = 1;
+
+            const offset = pixelIndex * 4;
+            const current = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+            if (!this.canFloodPixel(current, target, paint, tolerance, boundaryAlpha)) continue;
+
+            data[offset] = paint[0];
+            data[offset + 1] = paint[1];
+            data[offset + 2] = paint[2];
+            data[offset + 3] = paint[3];
+
+            stack.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+        }
+
+        ctx.putImageData(image, 0, 0);
+
+    }
+
+    canFloodPixel(current, target, paint, tolerance, boundaryAlpha) {
+
+        const alreadyPainted = Math.abs(current[0] - paint[0]) <= tolerance
+            && Math.abs(current[1] - paint[1]) <= tolerance
+            && Math.abs(current[2] - paint[2]) <= tolerance
+            && Math.abs(current[3] - paint[3]) <= tolerance;
+
+        if (alreadyPainted) return false;
+
+        const targetTransparent = target[3] < boundaryAlpha;
+        if (targetTransparent) return current[3] < boundaryAlpha;
+
+        return Math.abs(current[0] - target[0]) <= tolerance
+            && Math.abs(current[1] - target[1]) <= tolerance
+            && Math.abs(current[2] - target[2]) <= tolerance
+            && Math.abs(current[3] - target[3]) <= tolerance;
+
+    }
+
+    colorToRgba(color, opacity = 1) {
+
+        const hex = String(color || "#000000").trim();
+        const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
+        const full = normalized.length === 3
+            ? normalized.split("").map(char => char + char).join("")
+            : normalized.padEnd(6, "0").slice(0, 6);
+
+        return [
+            parseInt(full.slice(0, 2), 16) || 0,
+            parseInt(full.slice(2, 4), 16) || 0,
+            parseInt(full.slice(4, 6), 16) || 0,
+            Math.max(0, Math.min(255, Math.round(opacity * 255)))
+        ];
+
+    }
+
     bindCanvas(page, canDraw) {
 
         const canvas = this.byId("library-drawing-canvas");
@@ -631,7 +712,7 @@ class Library {
                 return;
             }
             if (tool === "bucket") {
-                this.fillDrawingPage(page);
+                this.fillDrawingPage(canvas, event, page);
                 return;
             }
 
@@ -713,14 +794,17 @@ class Library {
 
     }
 
-    async fillDrawingPage(page) {
+    async fillDrawingPage(canvas, event, page) {
 
-        if (!page) return;
+        if (!page || !canvas) return;
+        const point = this.eventToCanvasPoint(canvas, event);
 
         const fill = {
             type: "fill",
             color: this.byId("library-drawing-color")?.value || "#000",
             opacity: this.num("library-fill-opacity", 16) / 100,
+            x: point.x,
+            y: point.y,
             uv: this.uvDrawingMode,
             createdAt: new Date().toISOString()
         };
