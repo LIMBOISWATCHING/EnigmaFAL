@@ -630,11 +630,42 @@
     background:#050505;
 }
 
+.library-drawing-mode-row{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:6px;
+}
+
+.library-drawing-mode-row .library-btn{
+    min-width:0;
+    padding-left:4px;
+    padding-right:4px;
+    font-size:10px;
+}
+
 .library-drawing-toolbar select{
     grid-column:1 / -1;
     min-height:30px;
     font-size:11px;
     padding:5px 7px;
+}
+
+.library-drawing-color{
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:74px minmax(0, 1fr);
+    align-items:center;
+    gap:7px;
+    color:#777;
+    font-family:Consolas, "Courier New", monospace;
+    font-size:10px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+}
+
+.library-drawing-color input{
+    min-height:30px;
+    padding:2px;
 }
 
 .library-drawing-range{
@@ -654,7 +685,46 @@
 .library-drawing-range input{
     width:100%;
     min-width:0;
+    height:18px;
+    margin:0;
     accent-color:#00ff66;
+    cursor:pointer;
+}
+
+.library-drawing-range input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    background:transparent;
+}
+
+.library-drawing-range input[type="range"]::-webkit-slider-runnable-track{
+    height:4px;
+    background:#1d1d1d;
+    border:1px solid #2e2e2e;
+}
+
+.library-drawing-range input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:12px;
+    height:18px;
+    margin-top:-8px;
+    border:1px solid #00ff66;
+    background:#080808;
+}
+
+.library-drawing-range input[type="range"]::-moz-range-track{
+    height:4px;
+    background:#1d1d1d;
+    border:1px solid #2e2e2e;
+}
+
+.library-drawing-range input[type="range"]::-moz-range-thumb{
+    width:12px;
+    height:18px;
+    border:1px solid #00ff66;
+    border-radius:0;
+    background:#080808;
 }
 
 .library-drawing-canvas,
@@ -934,6 +1004,11 @@
 }
 
 .library-paper.uv-light-on .library-uv-text{
+    color:transparent !important;
+    text-shadow:none;
+}
+
+.library-paper.uv-light-on .library-uv-text.revealed{
     color:#7e36ff !important;
     text-shadow:0 0 6px rgba(126,54,255,.7), 0 0 14px rgba(126,54,255,.35);
 }
