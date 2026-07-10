@@ -26,6 +26,7 @@ class Library {
         this.zoomOffset = { x: 0, y: 0 };
         this.uvLightOn = false;
         this.uvDrawingMode = false;
+        this.uvSpot = null;
         this.drawingRedoStack = [];
 
     }
@@ -509,8 +510,32 @@ class Library {
         paper.addEventListener("pointermove", event => {
             if (!this.uvLightOn) return;
             const rect = paper.getBoundingClientRect();
-            paper.style.setProperty("--uv-x", `${event.clientX - rect.left}px`);
-            paper.style.setProperty("--uv-y", `${event.clientY - rect.top}px`);
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            paper.style.setProperty("--uv-x", `${x}px`);
+            paper.style.setProperty("--uv-y", `${y}px`);
+            this.uvSpot = { x, y };
+            this.updateUvReveal();
+            this.drawExistingLines(this.currentPage() || { drawings: [] });
+        });
+
+    }
+
+    updateUvReveal() {
+
+        const paper = this.byId("library-page-view");
+        if (!paper || !this.uvLightOn || !this.uvSpot) return;
+
+        const paperRect = paper.getBoundingClientRect();
+        const radius = 160;
+
+        paper.querySelectorAll(".library-uv-text").forEach(node => {
+            const rect = node.getBoundingClientRect();
+            const closestX = Math.max(rect.left - paperRect.left, Math.min(this.uvSpot.x, rect.right - paperRect.left));
+            const closestY = Math.max(rect.top - paperRect.top, Math.min(this.uvSpot.y, rect.bottom - paperRect.top));
+            const dx = closestX - this.uvSpot.x;
+            const dy = closestY - this.uvSpot.y;
+            node.classList.toggle("revealed", Math.sqrt(dx * dx + dy * dy) <= radius);
         });
 
     }
@@ -527,6 +552,10 @@ class Library {
             if (line.uv && !this.uvLightOn) return;
             if (line.type === "fill") {
                 ctx.save();
+                if (line.uv && !this.applyUvCanvasClip(ctx, canvas)) {
+                    ctx.restore();
+                    return;
+                }
                 ctx.fillStyle = line.uv ? "rgba(183, 120, 255, .18)" : (line.color || "rgba(0,0,0,.08)");
                 ctx.globalAlpha = Number(line.opacity ?? .18);
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -535,6 +564,11 @@ class Library {
             }
             if (line.type !== "line" || !line.points?.length) return;
             if (line.uv && !this.uvLightOn) return;
+            ctx.save();
+            if (line.uv && !this.applyUvCanvasClip(ctx, canvas)) {
+                ctx.restore();
+                return;
+            }
             ctx.strokeStyle = line.uv ? "rgba(183, 120, 255, .95)" : (line.color || "#000");
             ctx.shadowColor = line.uv ? "rgba(183, 120, 255, .75)" : "transparent";
             ctx.shadowBlur = line.uv ? 10 : 0;
@@ -557,7 +591,27 @@ class Library {
             ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
             ctx.setLineDash([]);
+            ctx.restore();
         });
+
+    }
+
+    applyUvCanvasClip(ctx, canvas) {
+
+        if (!this.uvSpot) return false;
+
+        const paper = this.byId("library-page-view");
+        if (!paper) return false;
+
+        const rect = paper.getBoundingClientRect();
+        const x = this.uvSpot.x / rect.width * canvas.width;
+        const y = this.uvSpot.y / rect.height * canvas.height;
+        const radius = 160 / rect.width * canvas.width;
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+        return true;
 
     }
 
@@ -641,15 +695,15 @@ class Library {
         const presets = {
             thin: { size: Math.max(1, brushSize * .5), opacity: brushOpacity },
             normal: { size: brushSize, opacity: brushOpacity },
-            marker: { size: Math.max(4, brushSize * 1.8), opacity: Math.min(.5, brushOpacity) },
-            brush: { size: Math.max(3, brushSize * 1.35), opacity: Math.min(.85, brushOpacity) },
+            marker: { size: Math.max(4, brushSize * 1.8), opacity: brushOpacity },
+            brush: { size: Math.max(3, brushSize * 1.35), opacity: brushOpacity },
             scratch: { size: Math.max(1, brushSize * .75), opacity: brushOpacity }
         };
         const preset = presets[penType] || presets.normal;
 
         return {
             type: "line",
-            color: this.byId("library-text-color")?.value || "#000",
+            color: this.byId("library-drawing-color")?.value || "#000",
             size: preset.size,
             opacity: preset.opacity,
             penType,
@@ -665,8 +719,8 @@ class Library {
 
         const fill = {
             type: "fill",
-            color: this.byId("library-text-color")?.value || "#000",
-            opacity: this.uvDrawingMode ? .22 : this.num("library-fill-opacity", 16) / 100,
+            color: this.byId("library-drawing-color")?.value || "#000",
+            opacity: this.num("library-fill-opacity", 16) / 100,
             uv: this.uvDrawingMode,
             createdAt: new Date().toISOString()
         };
@@ -691,7 +745,7 @@ class Library {
             });
         });
 
-        if (nearest?.color) this.set("library-text-color", nearest.color);
+        if (nearest?.color) this.set("library-drawing-color", nearest.color);
 
     }
 
@@ -1538,6 +1592,15 @@ class Library {
         if (button) button.classList.toggle("active", this.uvLightOn);
         const paper = this.byId("library-page-view");
         paper?.classList.toggle("uv-light-on", this.uvLightOn);
+        if (!this.uvLightOn) {
+            this.uvSpot = null;
+            paper?.querySelectorAll(".library-uv-text.revealed").forEach(node => node.classList.remove("revealed"));
+        } else if (!this.uvSpot && paper) {
+            this.uvSpot = { x: paper.clientWidth / 2, y: paper.clientHeight / 2 };
+            paper.style.setProperty("--uv-x", `${this.uvSpot.x}px`);
+            paper.style.setProperty("--uv-y", `${this.uvSpot.y}px`);
+            this.updateUvReveal();
+        }
         this.drawExistingLines(this.currentPage() || { drawings: [] });
 
     }

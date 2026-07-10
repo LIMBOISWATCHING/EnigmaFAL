@@ -194,9 +194,26 @@
                 </div>
                 <input id="library-text-color" class="library-input" type="color" value="#1b130d">
                 <button id="library-apply-color" class="library-btn ghost" type="button">Cor do Texto</button>
+                <button id="library-apply-uv-text" class="library-btn ghost" type="button">Texto UV</button>
+                <input id="library-highlight-words" class="library-input" type="text" placeholder="Destacar palavras">
+                <button id="library-apply-highlights" class="library-btn ghost" type="button">Destacar</button>
+                <button id="library-clear-highlights" class="library-btn ghost" type="button">Tirar Destaque</button>
+            </div>
+
+            <div class="library-tool-block collapsed">
+                <button class="library-tool-label" type="button">Desenho</button>
+                <div class="library-drawing-mode-row">
+                    <button id="library-toggle-drawing" class="library-btn ghost" type="button">Modo Desenho</button>
+                    <button id="library-toggle-eraser" class="library-btn ghost" type="button">Borracha</button>
+                </div>
+                <button id="library-toggle-uv-drawing" class="library-btn ghost" type="button">Desenho UV</button>
                 <div class="library-drawing-toolbar">
                     <button id="library-drawing-undo" class="library-format-btn" type="button" title="Desfazer desenho">Voltar</button>
                     <button id="library-drawing-redo" class="library-format-btn" type="button" title="Refazer desenho">Refazer</button>
+                    <label class="library-drawing-color">
+                        <span>Cor</span>
+                        <input id="library-drawing-color" class="library-input" type="color" value="#000000">
+                    </label>
                     <select id="library-drawing-tool" class="library-input">
                         <option value="pen">Lapiz</option>
                         <option value="bucket">Balde</option>
@@ -211,29 +228,22 @@
                     </select>
                     <label class="library-drawing-range">
                         <span>Tamanho</span>
-                        <input id="library-brush-size" type="range" min="1" max="36" value="3">
+                        <input id="library-brush-size" type="range" min="1" max="60" value="3">
                     </label>
                     <label class="library-drawing-range">
                         <span>Opacidade</span>
-                        <input id="library-brush-opacity" type="range" min="10" max="100" value="100">
+                        <input id="library-brush-opacity" type="range" min="0" max="100" value="100">
                     </label>
                     <label class="library-drawing-range">
                         <span>Borracha</span>
-                        <input id="library-eraser-size" type="range" min="8" max="80" value="26">
+                        <input id="library-eraser-size" type="range" min="1" max="120" value="26">
                     </label>
                     <label class="library-drawing-range">
                         <span>Balde</span>
-                        <input id="library-fill-opacity" type="range" min="5" max="70" value="16">
+                        <input id="library-fill-opacity" type="range" min="0" max="100" value="16">
                     </label>
                 </div>
-                <button id="library-toggle-drawing" class="library-btn ghost" type="button">Modo Desenho</button>
-                <button id="library-toggle-uv-drawing" class="library-btn ghost" type="button">Desenho UV</button>
-                <button id="library-apply-uv-text" class="library-btn ghost" type="button">Texto UV</button>
-                <button id="library-toggle-eraser" class="library-btn ghost" type="button">Borracha</button>
                 <button id="library-clear-drawings" class="library-btn danger" type="button">Apagar Desenhos</button>
-                <input id="library-highlight-words" class="library-input" type="text" placeholder="Destacar palavras">
-                <button id="library-apply-highlights" class="library-btn ghost" type="button">Destacar</button>
-                <button id="library-clear-highlights" class="library-btn ghost" type="button">Tirar Destaque</button>
             </div>
 
             <div class="library-tool-block collapsed">
