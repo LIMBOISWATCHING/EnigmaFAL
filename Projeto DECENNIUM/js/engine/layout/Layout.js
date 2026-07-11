@@ -48,6 +48,7 @@ class Layout extends CoreModule {
         await super.initialize();
 
         this.build();
+        this.bindViewportSizing();
 
         MC.log("Layout iniciado.");
 
@@ -136,6 +137,25 @@ class Layout extends CoreModule {
         `;
 
         this.renderDicePanel();
+
+    }
+
+    bindViewportSizing() {
+
+        const update = () => {
+            const viewport = window.visualViewport;
+            const height = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
+            const keyboardOpen = Boolean(viewport && window.innerHeight - viewport.height > 120);
+
+            document.documentElement.style.setProperty("--mc-vvh", `${Math.max(320, Math.round(height))}px`);
+            document.body.classList.toggle("mc-keyboard-open", keyboardOpen);
+        };
+
+        update();
+        window.visualViewport?.addEventListener("resize", update);
+        window.visualViewport?.addEventListener("scroll", update);
+        window.addEventListener("resize", update);
+        window.addEventListener("orientationchange", () => setTimeout(update, 80));
 
     }
 
