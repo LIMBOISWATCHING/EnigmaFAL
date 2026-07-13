@@ -29,6 +29,9 @@ class Cases {
         this.pan = null;
         this.resize = null;
         this.boardWheelTimer = null;
+        this.boardPointers = new Map();
+        this.boardPinch = null;
+        this.boardPointerActive = false;
     }
 
     async open(container) {
@@ -1044,7 +1047,9 @@ class Cases {
 
     async startDrag(event, id) {
         if (event.button !== 0) return;
+        event.preventDefault();
         event.stopPropagation();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
         const item = this.current.board.items.find(entry => entry.id === id);
         if (!item) return;
         const zoom = this.current.board.view.zoom || 1;
@@ -1084,7 +1089,9 @@ class Cases {
 
     async startResize(event, id) {
         if (event.button !== 0) return;
+        event.preventDefault();
         event.stopPropagation();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
         const item = this.current.board.items.find(entry => entry.id === id);
         if (!item) return;
         this.resize = {
@@ -1125,28 +1132,133 @@ class Cases {
         if (event.button !== 0) return;
         if (event.target.closest(".case-board-item") || event.target.closest(".case-board-zoom-panel")) return;
         if (!this.current?.board?.view) return;
-        this.pan = {
-            startX: event.clientX,
-            startY: event.clientY,
-            viewX: this.current.board.view.x,
-            viewY: this.current.board.view.y
-        };
-        window.addEventListener("pointermove", this.panMove);
-        window.addEventListener("pointerup", this.panEnd, { once: true });
+        event.preventDefault();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
+        this.boardPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (!this.boardPointerActive) {
+            this.boardPointerActive = true;
+            window.addEventListener("pointermove", this.boardPointerMove);
+            window.addEventListener("pointerup", this.boardPointerEnd);
+            window.addEventListener("pointercancel", this.boardPointerEnd);
+        }
+
+        if (this.boardPointers.size === 1) {
+            this.pan = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                viewX: this.current.board.view.x,
+                viewY: this.current.board.view.y
+            };
+        } else if (this.boardPointers.size === 2) {
+            this.startBoardPinch();
+        }
     }
 
-    panMove = (event) => {
-        if (!this.pan || !this.current?.board?.view) return;
+    boardPointerMove = (event) => {
+        if (!this.current?.board?.view || !this.boardPointers.has(event.pointerId)) return;
+        event.preventDefault();
+        this.boardPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (this.boardPointers.size >= 2) {
+            this.updateBoardPinch();
+            return;
+        }
+
+        if (!this.pan) return;
         this.current.board.view.x = this.pan.viewX + (event.clientX - this.pan.startX);
         this.current.board.view.y = this.pan.viewY + (event.clientY - this.pan.startY);
         this.applyBoardTransform();
     };
 
-    panEnd = async () => {
-        window.removeEventListener("pointermove", this.panMove);
+    boardPointerEnd = async (event) => {
+        if (!this.boardPointers.has(event.pointerId)) return;
+        this.boardPointers.delete(event.pointerId);
+        this.boardPinch = null;
+
+        if (this.boardPointers.size === 1 && this.current?.board?.view) {
+            const [remaining] = this.boardPointers.entries();
+            const [pointerId, point] = remaining;
+            this.pan = {
+                pointerId,
+                startX: point.x,
+                startY: point.y,
+                viewX: this.current.board.view.x,
+                viewY: this.current.board.view.y
+            };
+            return;
+        }
+
+        if (this.boardPointers.size > 0) return;
+
+        window.removeEventListener("pointermove", this.boardPointerMove);
+        window.removeEventListener("pointerup", this.boardPointerEnd);
+        window.removeEventListener("pointercancel", this.boardPointerEnd);
+        this.boardPointerActive = false;
         this.pan = null;
         await this.quickSave();
     };
+
+    startBoardPinch() {
+
+        const metrics = this.boardTouchMetrics();
+        const viewport = this.byId("case-board-viewport");
+        if (!metrics || !viewport || !this.current?.board?.view) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const view = this.current.board.view;
+        const zoom = this.clamp(view.zoom || 0.65, 0.03, 6);
+        const midX = metrics.midX - rect.left;
+        const midY = metrics.midY - rect.top;
+
+        this.boardPinch = {
+            distance: metrics.distance,
+            zoom,
+            worldX: (midX - view.x) / zoom,
+            worldY: (midY - view.y) / zoom
+        };
+        this.pan = null;
+
+    }
+
+    updateBoardPinch() {
+
+        const metrics = this.boardTouchMetrics();
+        const viewport = this.byId("case-board-viewport");
+        if (!metrics || !viewport || !this.current?.board?.view) return;
+        if (!this.boardPinch) this.startBoardPinch();
+        if (!this.boardPinch) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const view = this.current.board.view;
+        const nextZoom = this.clamp(this.boardPinch.zoom * (metrics.distance / Math.max(1, this.boardPinch.distance)), 0.03, 6);
+        const midX = metrics.midX - rect.left;
+        const midY = metrics.midY - rect.top;
+
+        view.zoom = nextZoom;
+        view.x = midX - this.boardPinch.worldX * nextZoom;
+        view.y = midY - this.boardPinch.worldY * nextZoom;
+        this.applyBoardTransform();
+        this.updateZoomLabel();
+        this.markDirty();
+
+    }
+
+    boardTouchMetrics() {
+
+        const points = [...this.boardPointers.values()].slice(0, 2);
+        if (points.length < 2) return null;
+        const [a, b] = points;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        return {
+            distance: Math.sqrt(dx * dx + dy * dy),
+            midX: (a.x + b.x) / 2,
+            midY: (a.y + b.y) / 2
+        };
+
+    }
 
     handleBoardWheel(event) {
         if (!this.current?.board?.view) return;

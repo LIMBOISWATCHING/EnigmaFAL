@@ -17,6 +17,9 @@ class PersonalBoard {
         this.wheelTimer = null;
         this.adminUsers = [];
         this.selectedBoardUserId = null;
+        this.boardPointers = new Map();
+        this.boardPinch = null;
+        this.boardPointerActive = false;
     }
 
     async open(container) {
@@ -668,7 +671,9 @@ class PersonalBoard {
     }
 
     startDrag(event, id) {
+        event.preventDefault();
         event.stopPropagation();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
         const item = this.board.items.find(entry => entry.id === id);
         if (!item) return;
         this.drag = { id, x:event.clientX, y:event.clientY, itemX:item.x, itemY:item.y, zoom:this.board.view.zoom || 1 };
@@ -691,7 +696,9 @@ class PersonalBoard {
     };
 
     startResize(event, id) {
+        event.preventDefault();
         event.stopPropagation();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
         const item = this.board.items.find(entry => entry.id === id);
         if (!item) return;
         this.resize = { id, x:event.clientX, y:event.clientY, width:item.width, height:item.height, zoom:this.board.view.zoom || 1 };
@@ -715,22 +722,124 @@ class PersonalBoard {
 
     startPan(event) {
         if (event.target.closest(".case-board-item") || event.target.closest(".case-board-zoom-panel")) return;
-        this.pan = { x:event.clientX, y:event.clientY, viewX:this.board.view.x, viewY:this.board.view.y };
-        window.addEventListener("pointermove", this.panMove);
-        window.addEventListener("pointerup", this.panEnd, { once:true });
+        event.preventDefault();
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
+        this.boardPointers.set(event.pointerId, { x:event.clientX, y:event.clientY });
+
+        if (!this.boardPointerActive) {
+            this.boardPointerActive = true;
+            window.addEventListener("pointermove", this.boardPointerMove);
+            window.addEventListener("pointerup", this.boardPointerEnd);
+            window.addEventListener("pointercancel", this.boardPointerEnd);
+        }
+
+        if (this.boardPointers.size === 1) {
+            this.pan = {
+                pointerId:event.pointerId,
+                x:event.clientX,
+                y:event.clientY,
+                viewX:this.board.view.x,
+                viewY:this.board.view.y
+            };
+        } else if (this.boardPointers.size === 2) {
+            this.startBoardPinch();
+        }
     }
 
-    panMove = event => {
+    boardPointerMove = event => {
+        if (!this.boardPointers.has(event.pointerId)) return;
+        event.preventDefault();
+        this.boardPointers.set(event.pointerId, { x:event.clientX, y:event.clientY });
+
+        if (this.boardPointers.size >= 2) {
+            this.updateBoardPinch();
+            return;
+        }
+
+        if (!this.pan) return;
         this.board.view.x = this.pan.viewX + event.clientX - this.pan.x;
         this.board.view.y = this.pan.viewY + event.clientY - this.pan.y;
         this.applyTransform();
     };
 
-    panEnd = () => {
-        window.removeEventListener("pointermove", this.panMove);
+    boardPointerEnd = event => {
+        if (!this.boardPointers.has(event.pointerId)) return;
+        this.boardPointers.delete(event.pointerId);
+        this.boardPinch = null;
+
+        if (this.boardPointers.size === 1) {
+            const [remaining] = this.boardPointers.entries();
+            const [pointerId, point] = remaining;
+            this.pan = {
+                pointerId,
+                x:point.x,
+                y:point.y,
+                viewX:this.board.view.x,
+                viewY:this.board.view.y
+            };
+            return;
+        }
+
+        if (this.boardPointers.size > 0) return;
+
+        window.removeEventListener("pointermove", this.boardPointerMove);
+        window.removeEventListener("pointerup", this.boardPointerEnd);
+        window.removeEventListener("pointercancel", this.boardPointerEnd);
+        this.boardPointerActive = false;
         this.pan = null;
         this.saveBoard();
     };
+
+    startBoardPinch() {
+        const metrics = this.boardTouchMetrics();
+        const viewport = this.byId("personal-board-viewport");
+        if (!metrics || !viewport) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const zoom = this.clamp(this.board.view.zoom || .65, .03, 6);
+        const midX = metrics.midX - rect.left;
+        const midY = metrics.midY - rect.top;
+
+        this.boardPinch = {
+            distance:metrics.distance,
+            zoom,
+            worldX:(midX - this.board.view.x) / zoom,
+            worldY:(midY - this.board.view.y) / zoom
+        };
+        this.pan = null;
+    }
+
+    updateBoardPinch() {
+        const metrics = this.boardTouchMetrics();
+        const viewport = this.byId("personal-board-viewport");
+        if (!metrics || !viewport) return;
+        if (!this.boardPinch) this.startBoardPinch();
+        if (!this.boardPinch) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const nextZoom = this.clamp(this.boardPinch.zoom * (metrics.distance / Math.max(1, this.boardPinch.distance)), .03, 6);
+        const midX = metrics.midX - rect.left;
+        const midY = metrics.midY - rect.top;
+
+        this.board.view.zoom = nextZoom;
+        this.board.view.x = midX - this.boardPinch.worldX * nextZoom;
+        this.board.view.y = midY - this.boardPinch.worldY * nextZoom;
+        this.applyTransform();
+        this.updateZoomLabel();
+    }
+
+    boardTouchMetrics() {
+        const points = [...this.boardPointers.values()].slice(0, 2);
+        if (points.length < 2) return null;
+        const [a, b] = points;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        return {
+            distance:Math.sqrt(dx * dx + dy * dy),
+            midX:(a.x + b.x) / 2,
+            midY:(a.y + b.y) / 2
+        };
+    }
 
     handleWheel(event) {
         event.preventDefault();

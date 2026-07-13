@@ -1196,6 +1196,8 @@ body.case-board-fullscreen-open {
     inset:0;
     overflow:hidden;
     cursor:grab;
+    touch-action:none;
+    user-select:none;
 }
 
 .case-board-viewport:active {
@@ -1209,6 +1211,7 @@ body.case-board-fullscreen-open {
     width:10800px;
     height:7200px;
     transform-origin:0 0;
+    will-change:transform;
     background:
         linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
@@ -1542,6 +1545,7 @@ body.case-board-fullscreen-open {
     border:1px solid #285c3c;
     cursor:grab;
     opacity:.82;
+    touch-action:none;
 }
 
 .case-board-menu {
@@ -1625,6 +1629,7 @@ body.case-board-fullscreen-open {
         #050505;
     cursor:nwse-resize;
     opacity:0;
+    touch-action:none;
 }
 
 .case-board-item:hover .case-board-resize {
@@ -2453,6 +2458,48 @@ body.case-board-fullscreen-open {
 
     .case-board {
         min-height:540px;
+    }
+
+    .case-board-viewport {
+        touch-action:none;
+    }
+
+    .case-board-grip {
+        top:-16px;
+        left:6px;
+        right:6px;
+        height:28px;
+        opacity:1;
+    }
+
+    .case-board-resize {
+        right:-14px;
+        bottom:-14px;
+        width:30px;
+        height:30px;
+        opacity:1;
+    }
+
+    .case-board-menu {
+        opacity:1;
+        pointer-events:auto;
+        grid-template-columns:repeat(4, minmax(34px, auto));
+        gap:6px;
+        padding:7px;
+    }
+
+    .case-board-link,
+    .case-board-delete,
+    .case-board-size-up,
+    .case-board-size-down,
+    .case-board-rotate-left,
+    .case-board-rotate-right,
+    .case-board-highlight,
+    .case-board-edit {
+        min-width:34px;
+        min-height:34px;
+        padding:5px 7px;
+        font-size:10px;
     }
 
     .case-board-tools .case-input,

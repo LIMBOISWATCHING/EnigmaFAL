@@ -519,17 +519,32 @@ class Library {
         const paper = this.byId("library-page-view");
         if (!paper) return;
 
-        paper.addEventListener("pointermove", event => {
+        const moveUv = event => {
             if (!this.uvLightOn) return;
-            const rect = paper.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            paper.style.setProperty("--uv-x", `${x}px`);
-            paper.style.setProperty("--uv-y", `${y}px`);
-            this.uvSpot = { x, y };
-            this.updateUvReveal();
-            this.drawExistingLines(this.currentPage() || { drawings: [] });
-        });
+            event.preventDefault();
+            paper.setPointerCapture?.(event.pointerId);
+            this.moveUvLight(event);
+        };
+
+        paper.addEventListener("pointerdown", moveUv);
+        paper.addEventListener("pointermove", moveUv);
+
+    }
+
+    moveUvLight(event) {
+
+        const paper = this.byId("library-page-view");
+        if (!paper) return;
+
+        const rect = paper.getBoundingClientRect();
+        const x = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const y = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+
+        paper.style.setProperty("--uv-x", `${x}px`);
+        paper.style.setProperty("--uv-y", `${y}px`);
+        this.uvSpot = { x, y };
+        this.updateUvReveal();
+        this.drawExistingLines(this.currentPage() || { drawings: [] });
 
     }
 
@@ -539,7 +554,7 @@ class Library {
         if (!paper || !this.uvLightOn || !this.uvSpot) return;
 
         const paperRect = paper.getBoundingClientRect();
-        const radius = 160;
+        const radius = window.matchMedia?.("(pointer: coarse)")?.matches ? 220 : 160;
 
         paper.querySelectorAll(".library-uv-text").forEach(node => {
             const rect = node.getBoundingClientRect();
@@ -617,7 +632,8 @@ class Library {
         const rect = paper.getBoundingClientRect();
         const x = this.uvSpot.x / rect.width * canvas.width;
         const y = this.uvSpot.y / rect.height * canvas.height;
-        const radius = 160 / rect.width * canvas.width;
+        const visualRadius = window.matchMedia?.("(pointer: coarse)")?.matches ? 220 : 160;
+        const radius = visualRadius / rect.width * canvas.width;
 
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
