@@ -15,6 +15,7 @@ class PersonalBoard {
         this.resize = null;
         this.pan = null;
         this.wheelTimer = null;
+        this.saveTimer = null;
         this.adminUsers = [];
         this.selectedBoardUserId = null;
         this.boardPointers = new Map();
@@ -37,7 +38,7 @@ class PersonalBoard {
     }
 
     async close() {
-        this.saveBoard();
+        this.flushBoardSave();
         return true;
     }
 
@@ -81,8 +82,7 @@ class PersonalBoard {
             this.board.view.zoom = this.clamp(Number(event.target.value) / 100, .03, 6);
             this.applyTransform();
             this.updateZoomLabel();
-            clearTimeout(this.wheelTimer);
-            this.wheelTimer = setTimeout(() => this.saveBoard(), 180);
+            this.saveBoardSoon(180);
         });
         this.byId("personal-board-viewport")?.addEventListener("pointerdown", event => this.startPan(event));
         this.byId("personal-board-viewport")?.addEventListener("wheel", event => this.handleWheel(event), { passive:false });
@@ -159,6 +159,19 @@ class PersonalBoard {
     }
 
     saveBoard() {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
+        localStorage.setItem(this.storageKey(), JSON.stringify(this.board));
+    }
+
+    saveBoardSoon(delay = 180) {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => this.saveBoard(), delay);
+    }
+
+    flushBoardSave() {
+        clearTimeout(this.saveTimer);
+        this.saveTimer = null;
         localStorage.setItem(this.storageKey(), JSON.stringify(this.board));
     }
 
@@ -686,7 +699,12 @@ class PersonalBoard {
         if (!item) return;
         item.x = this.clamp(this.drag.itemX + (event.clientX - this.drag.x) / this.drag.zoom, 0, BOARD_WIDTH - item.width);
         item.y = this.clamp(this.drag.itemY + (event.clientY - this.drag.y) / this.drag.zoom, 0, BOARD_HEIGHT - item.height);
-        this.renderBoard();
+        const el = this.byId("personal-board-items")?.querySelector(`.case-board-item[data-id="${CSS.escape(item.id)}"]`);
+        if (el) {
+            el.style.left = `${item.x}px`;
+            el.style.top = `${item.y}px`;
+        }
+        this.renderLines();
     };
 
     dragEnd = () => {
@@ -711,7 +729,12 @@ class PersonalBoard {
         if (!item) return;
         item.width = this.clamp(this.resize.width + (event.clientX - this.resize.x) / this.resize.zoom, 90, 620);
         item.height = this.clamp(this.resize.height + (event.clientY - this.resize.y) / this.resize.zoom, 70, 520);
-        this.renderBoard();
+        const el = this.byId("personal-board-items")?.querySelector(`.case-board-item[data-id="${CSS.escape(item.id)}"]`);
+        if (el) {
+            el.style.width = `${item.width}px`;
+            el.style.minHeight = `${item.height}px`;
+        }
+        this.renderLines();
     };
 
     resizeEnd = () => {
@@ -857,8 +880,7 @@ class PersonalBoard {
         this.board.view.y = cursorY - worldY * nextZoom;
         this.applyTransform();
         this.updateZoomLabel();
-        clearTimeout(this.wheelTimer);
-        this.wheelTimer = setTimeout(() => this.saveBoard(), 240);
+        this.saveBoardSoon(240);
     }
 
     applyTransform() {

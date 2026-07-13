@@ -220,11 +220,46 @@ async logout() {
 
         if (!index) {
 
+            const user = await this.findExistingUserByName(name);
+
+            if (user) {
+
+                await MC.Database.set(
+
+                    `usernames/${this.usernameKey(name)}`,
+
+                    {
+
+                        id: user.id
+
+                    }
+
+                );
+
+                return user;
+
+            }
+
             return null;
 
         }
 
         return await this.findById(index.id);
+
+    }
+
+    async findExistingUserByName(name) {
+
+        const users = await MC.Database.get("users");
+        const key = this.usernameKey(name);
+
+        if (!users || typeof users !== "object") return null;
+
+        const matches = Object.values(users)
+            .filter(user => this.usernameKey(user?.username || user?.name) === key)
+            .sort((a, b) => Number(a.lastLogin || 0) - Number(b.lastLogin || 0));
+
+        return matches[0] || null;
 
     }
 

@@ -114,6 +114,47 @@ class CaseService extends BaseService {
 
     }
 
+    async patch(id, data = {}) {
+
+        const entity = await this.repository.findById(id);
+        if (!entity || entity.status === "deleted") throw new Error("Caso nao encontrado.");
+
+        const allowed = [
+            "name",
+            "location",
+            "objective",
+            "description",
+            "cover",
+            "password",
+            "status",
+            "priority",
+            "classification",
+            "photos",
+            "notes",
+            "pages",
+            "audios",
+            "dossiers",
+            "board"
+        ];
+        const payload = {};
+
+        allowed.forEach(key => {
+            if (!Object.prototype.hasOwnProperty.call(data, key)) return;
+            payload[key] = data[key];
+            entity[key] = data[key];
+        });
+
+        if (!Object.keys(payload).length) return entity;
+
+        payload.updatedAt = new Date().toISOString();
+        entity.updatedAt = payload.updatedAt;
+
+        await MC.Database.update(`cases/${id}`, payload);
+
+        return new CaseModel(entity.toJSON ? entity.toJSON() : entity);
+
+    }
+
     async delete(id) {
 
         const entity = await this.repository.findById(id);

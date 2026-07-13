@@ -16,6 +16,7 @@ class Library {
         this.dirty = false;
         this.bookDirty = false;
         this.pageDirty = false;
+        this.dirtyBookFields = new Set();
         this.drawing = false;
         this.currentLine = null;
         this.drawingMode = false;
@@ -31,6 +32,8 @@ class Library {
         this.uvSpot = null;
         this.drawingHistory = new Map();
         this.eraseBeforeSnapshot = null;
+        this.pendingPageSaves = new Map();
+        this.pendingNoteSaves = new Map();
 
     }
 
@@ -269,6 +272,7 @@ class Library {
         if (this.activePageIndex < 0) this.activePageIndex = 0;
         this.bookDirty = false;
         this.pageDirty = false;
+        this.dirtyBookFields.clear();
         this.refreshDirty();
 
         this.byId("library-shelves")?.classList.add("hidden");
@@ -288,6 +292,7 @@ class Library {
         this.dirty = false;
         this.bookDirty = false;
         this.pageDirty = false;
+        this.dirtyBookFields.clear();
         this.pageHistory = [];
         this.byId("library-reader")?.classList.add("hidden");
         this.byId("library-shelves")?.classList.remove("hidden");
@@ -1073,13 +1078,70 @@ class Library {
 
     async saveDrawings(page) {
 
-        try {
+        return await this.queuePageSave(page?.id, async () => {
             const updated = await MC.Services.Library.updateDrawings(page.id, page.drawings || []);
             this.replacePage(updated);
             this.pageDirty = false;
             this.refreshDirty();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao salvar desenho.");
+            return updated;
+        }, "Erro ao salvar desenho.");
+
+    }
+
+    queuePageSave(pageId, task, errorMessage = "Erro ao salvar pagina.") {
+
+        if (!pageId || typeof task !== "function") return Promise.resolve(null);
+
+        const previous = this.pendingPageSaves.get(pageId) || Promise.resolve();
+        const next = previous
+            .catch(() => null)
+            .then(task)
+            .catch(async err => {
+                if (errorMessage) await MC.UI.alert(err.message || errorMessage);
+                return null;
+            })
+            .finally(() => {
+                if (this.pendingPageSaves.get(pageId) === next) {
+                    this.pendingPageSaves.delete(pageId);
+                }
+            });
+
+        this.pendingPageSaves.set(pageId, next);
+        return next;
+
+    }
+
+    async waitForPageSaves(pageId = "") {
+
+        this.flushPendingNoteSaves(pageId);
+
+        if (pageId) {
+            await (this.pendingPageSaves.get(pageId) || Promise.resolve());
+            return;
+        }
+
+        await Promise.all([...this.pendingPageSaves.values()]);
+
+    }
+
+    hasPendingPageSave(pageId = "") {
+
+        return pageId
+            ? this.pendingPageSaves.has(pageId)
+            : this.pendingPageSaves.size > 0;
+
+    }
+
+    isCurrentPageId(pageId) {
+
+        return Boolean(pageId && this.currentPage()?.id === pageId);
+
+    }
+
+    renderIfCurrentPage(pageId) {
+
+        if (this.isCurrentPageId(pageId)) {
+            this.renderOpenBook();
         }
 
     }
@@ -1366,30 +1428,30 @@ class Library {
 
     async saveImage(page, image) {
 
-        try {
+        const updated = await this.queuePageSave(page?.id, async () => {
             const updated = await MC.Services.Library.updateImage(page.id, image.id, image);
             this.replacePage(updated);
             this.pageDirty = false;
             this.refreshDirty();
-            this.renderOpenBook();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao salvar imagem.");
-        }
+            return updated;
+        }, "Erro ao salvar imagem.");
+
+        if (updated) this.renderIfCurrentPage(updated.id);
 
     }
 
     async deleteImage(page, imageId) {
 
-        try {
+        const updated = await this.queuePageSave(page?.id, async () => {
             const updated = await MC.Services.Library.deleteImage(page.id, imageId);
             this.replacePage(updated);
             this.zoomImage = null;
             this.pageDirty = false;
             this.refreshDirty();
-            this.renderOpenBook();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao remover imagem.");
-        }
+            return updated;
+        }, "Erro ao remover imagem.");
+
+        if (updated) this.renderIfCurrentPage(updated.id);
 
     }
 
@@ -1459,20 +1521,48 @@ class Library {
 
     async deleteNote(page, noteId) {
 
-        try {
+        const updated = await this.queuePageSave(page?.id, async () => {
             const updated = await MC.Services.Library.deleteNote(page.id, noteId);
             this.replacePage(updated);
-            this.renderOpenBook();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao remover nota.");
-        }
+            return updated;
+        }, "Erro ao remover nota.");
+
+        if (updated) this.renderIfCurrentPage(updated.id);
 
     }
 
     async saveNotePosition(page, note) {
 
-        try { await MC.Services.Library.updateNote(page.id, note.id, note); }
-        catch (err) {}
+        if (!page?.id || !note?.id) return;
+
+        const key = `${page.id}:${note.id}`;
+        const pending = this.pendingNoteSaves.get(key);
+        if (pending?.timer) clearTimeout(pending.timer);
+
+        const commit = () => {
+            this.pendingNoteSaves.delete(key);
+            this.queuePageSave(page.id, async () => {
+                const updated = await MC.Services.Library.updateNote(page.id, note.id, note);
+                this.replacePage(updated);
+                return updated;
+            }, "");
+        };
+
+        this.pendingNoteSaves.set(key, {
+            pageId: page.id,
+            timer: setTimeout(commit, 180),
+            commit
+        });
+
+    }
+
+    flushPendingNoteSaves(pageId = "") {
+
+        [...this.pendingNoteSaves.entries()].forEach(([key, pending]) => {
+            if (pageId && pending.pageId !== pageId) return;
+            clearTimeout(pending.timer);
+            pending.commit();
+        });
 
     }
 
@@ -1508,6 +1598,8 @@ class Library {
             return true;
         }
 
+        await this.waitForPageSaves(page.id);
+
         if (!this.pageDirty && !this.hasPageChanges(page)) return true;
 
         if (!MC.Services.Library.canEditPage(page)) {
@@ -1525,13 +1617,17 @@ class Library {
         if (!this.activeBook) return;
 
         try {
+            await this.waitForPageSaves();
             const pagesSaved = await this.saveAllPages({ silent: true });
             if (!pagesSaved) {
                 await MC.UI.alert("Nao foi possivel salvar todas as paginas.");
                 return;
             }
-            this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, this.bookSavePayload());
-            this.bookDirty = false;
+            const payload = this.bookSavePayload(this.dirtyBookFields);
+            if (this.hasBookChanges(payload)) {
+                this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, payload);
+            }
+            this.clearBookDirty();
             this.pageDirty = false;
             this.refreshDirty();
             await this.loadBooks();
@@ -1592,17 +1688,20 @@ class Library {
             return true;
         }
 
-        try {
+        const updated = await this.queuePageSave(page.id, async () => {
             const updated = await MC.Services.Library.updatePage(page.id, this.pageSavePayload(page));
             this.replacePage(updated);
             this.pageDirty = false;
             this.refreshDirty();
-            if (options.render !== false) this.renderOpenBook();
-            return true;
-        } catch (err) {
-            if (!options.silent) await MC.UI.alert(err.message || "Erro ao salvar pagina.");
+            return updated;
+        }, options.silent ? "" : "Erro ao salvar pagina.");
+
+        if (!updated) {
             return false;
         }
+
+        if (options.render !== false) this.renderIfCurrentPage(updated.id);
+        return true;
 
     }
 
@@ -1610,16 +1709,23 @@ class Library {
 
         if (!this.pages.length) return true;
 
-        const current = this.currentPage();
+        let current = this.currentPage();
         const currentPageNumber = current?.pageNumber;
         const currentPageId = current?.id;
 
+        if (current) await this.waitForPageSaves(current.id);
+        current = currentPageId
+            ? this.pages.find(page => page.id === currentPageId) || this.currentPage()
+            : this.currentPage();
+
+        let savedCurrent = false;
         if (current && !this.isTornPage(current) && !current.deleted && this.hasPageChanges(current)) {
             const saved = await this.savePage({ silent: options.silent, render: false });
             if (!saved) return false;
+            savedCurrent = true;
         }
 
-        if (this.activeBook?.id) {
+        if (this.activeBook?.id && savedCurrent) {
             this.pages = await MC.Services.Library.findPages(this.activeBook.id);
             const idIndex = this.pages.findIndex(page => page.id === currentPageId);
             const nextIndex = idIndex >= 0
@@ -1676,9 +1782,32 @@ class Library {
 
     }
 
-    bookSavePayload() {
+    bookFieldMap() {
+
+        return {
+            "library-edit-title": "title",
+            "library-edit-seal": "seal",
+            "library-edit-font": "fontFamily",
+            "library-edit-color": "textColor",
+            "library-cover-color": "coverColor",
+            "library-cover-border": "coverBorderColor",
+            "library-page-style": "pageStyle",
+            "library-page-color": "pageColor",
+            "library-edit-password": "password"
+        };
+
+    }
+
+    bookSavePayload(fields = null) {
 
         const book = this.activeBook || {};
+        const wanted = fields && fields.size
+            ? new Set(fields)
+            : new Set(Object.values(this.bookFieldMap()));
+        const payload = {};
+        const put = (key, value) => {
+            if (wanted.has(key)) payload[key] = value;
+        };
         const textValue = (id, fallback = "") => {
             const el = this.byId(id);
             if (!el) return fallback;
@@ -1692,17 +1821,17 @@ class Library {
             return value || fallback;
         };
 
-        return {
-            title: textValue("library-edit-title", book.title),
-            seal: rawValue("library-edit-seal", book.seal),
-            fontFamily: rawValue("library-edit-font", book.fontFamily),
-            textColor: rawValue("library-edit-color", book.textColor),
-            coverColor: rawValue("library-cover-color", book.coverColor),
-            coverBorderColor: rawValue("library-cover-border", book.coverBorderColor),
-            pageStyle: rawValue("library-page-style", book.pageStyle),
-            pageColor: rawValue("library-page-color", book.pageColor),
-            password: this.byId("library-edit-password") ? String(this.byId("library-edit-password").value ?? "").trim() : (book.password || "")
-        };
+        put("title", textValue("library-edit-title", book.title));
+        put("seal", rawValue("library-edit-seal", book.seal));
+        put("fontFamily", rawValue("library-edit-font", book.fontFamily));
+        put("textColor", rawValue("library-edit-color", book.textColor));
+        put("coverColor", rawValue("library-cover-color", book.coverColor));
+        put("coverBorderColor", rawValue("library-cover-border", book.coverBorderColor));
+        put("pageStyle", rawValue("library-page-style", book.pageStyle));
+        put("pageColor", rawValue("library-page-color", book.pageColor));
+        put("password", this.byId("library-edit-password") ? String(this.byId("library-edit-password").value ?? "").trim() : (book.password || ""));
+
+        return payload;
 
     }
 
@@ -1717,6 +1846,8 @@ class Library {
 
         if (!this.activeBook) return true;
 
+        await this.waitForPageSaves();
+
         const pagesSaved = await this.saveAllPages({ silent: true });
         if (!pagesSaved) {
             await MC.UI.alert("Nao foi possivel salvar as paginas antes de sair.");
@@ -1724,8 +1855,7 @@ class Library {
         }
 
         if (!MC.Services.Library.canManageBook(this.activeBook)) {
-            this.bookDirty = false;
-            this.refreshDirty();
+            this.clearBookDirty();
             return true;
         }
 
@@ -1733,17 +1863,15 @@ class Library {
             return true;
         }
 
-        const payload = this.bookSavePayload();
+        const payload = this.bookSavePayload(this.dirtyBookFields);
         if (!this.hasBookChanges(payload)) {
-            this.bookDirty = false;
-            this.refreshDirty();
+            this.clearBookDirty();
             return true;
         }
 
         try {
             this.activeBook = await MC.Services.Library.updateBook(this.activeBook.id, payload);
-            this.bookDirty = false;
-            this.refreshDirty();
+            this.clearBookDirty();
             await this.loadBooks();
             return true;
         } catch (err) {
@@ -2095,13 +2223,15 @@ class Library {
         const url = this.byId("library-image-url")?.value.trim() || "";
         if (!page || !url) return;
 
-        try {
+        const updated = await this.queuePageSave(page.id, async () => {
             const updated = await MC.Services.Library.addImage(page.id, { url });
             this.replacePage(updated);
+            return updated;
+        }, "Erro ao adicionar imagem.");
+
+        if (updated) {
             this.set("library-image-url", "");
-            this.renderOpenBook();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao adicionar imagem.");
+            this.renderIfCurrentPage(updated.id);
         }
 
     }
@@ -2112,13 +2242,15 @@ class Library {
         const text = this.byId("library-note-text")?.value.trim() || "";
         if (!page || !text) return;
 
-        try {
+        const updated = await this.queuePageSave(page.id, async () => {
             const updated = await MC.Services.Library.addAnonymousNote(page.id, { text });
             this.replacePage(updated);
+            return updated;
+        }, "Erro ao criar nota.");
+
+        if (updated) {
             this.set("library-note-text", "");
-            this.renderOpenBook();
-        } catch (err) {
-            await MC.UI.alert(err.message || "Erro ao criar nota.");
+            this.renderIfCurrentPage(updated.id);
         }
 
     }
@@ -2178,20 +2310,10 @@ class Library {
         const target = event.target;
         if (!target?.closest?.("#library-reader")) return;
 
-        const bookFields = new Set([
-            "library-edit-title",
-            "library-edit-seal",
-            "library-edit-font",
-            "library-edit-color",
-            "library-cover-color",
-            "library-cover-border",
-            "library-page-style",
-            "library-page-color",
-            "library-edit-password"
-        ]);
+        const bookFields = this.bookFieldMap();
 
-        if (bookFields.has(target.id)) {
-            this.markBookDirty();
+        if (bookFields[target.id]) {
+            this.markBookDirty(target.id);
             return;
         }
 
@@ -2199,9 +2321,19 @@ class Library {
 
     }
 
-    markBookDirty() {
+    markBookDirty(fieldId = "") {
 
         this.bookDirty = true;
+        const field = this.bookFieldMap()[fieldId];
+        if (field) this.dirtyBookFields.add(field);
+        this.refreshDirty();
+
+    }
+
+    clearBookDirty() {
+
+        this.bookDirty = false;
+        this.dirtyBookFields.clear();
         this.refreshDirty();
 
     }

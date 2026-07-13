@@ -29,6 +29,8 @@ class Cases {
         this.pan = null;
         this.resize = null;
         this.boardWheelTimer = null;
+        this.pendingSave = Promise.resolve();
+        this.pendingSaveTimer = null;
         this.boardPointers = new Map();
         this.boardPinch = null;
         this.boardPointerActive = false;
@@ -45,6 +47,7 @@ class Cases {
     }
 
     async close() {
+        await this.flushPendingSave();
         if (!this.dirty) return true;
         return await MC.UI.confirm("Existem informacoes nao salvas neste caso. Sair sem salvar?");
     }
@@ -112,7 +115,7 @@ class Cases {
             this.updateZoomLabel();
             this.markDirty();
         });
-        this.byId("case-board-zoom")?.addEventListener("change", () => this.quickSave());
+        this.byId("case-board-zoom")?.addEventListener("change", () => this.quickSave(["board"]));
         this.byId("case-board-viewport")?.addEventListener("pointerdown", event => this.startPan(event));
         this.byId("case-board-viewport")?.addEventListener("wheel", event => this.handleBoardWheel(event), { passive: false });
         this.byId("case-zoom-close")?.addEventListener("click", () => this.closeZoom());
@@ -354,6 +357,7 @@ class Cases {
     }
 
     async backToList() {
+        await this.flushPendingSave();
         if (this.dirty && !await MC.UI.confirm("Existem informacoes nao salvas. Voltar sem salvar?")) return;
         this.current = null;
         this.dirty = false;
@@ -367,6 +371,7 @@ class Cases {
 
     async saveCurrent() {
         if (!this.current) return;
+        await this.flushPendingSave();
         this.current.name = this.value("case-edit-name");
         this.current.location = this.value("case-edit-location");
         this.current.objective = this.value("case-edit-objective");
@@ -379,7 +384,7 @@ class Cases {
         }
 
         try {
-            this.current = this.normalizeCase(await MC.Services.Cases.update(this.current));
+            this.current = this.normalizeCase(await MC.Services.Cases.patch(this.current.id, this.caseSavePayload()));
             this.dirty = false;
             this.refreshHeader();
             await this.loadCases();
@@ -390,10 +395,73 @@ class Cases {
         }
     }
 
-    async quickSave() {
-        if (!this.current) return;
-        this.current = this.normalizeCase(await MC.Services.Cases.update(this.current));
-        this.dirty = false;
+    caseSavePayload(fields = null) {
+        if (!this.current) return {};
+
+        const wanted = fields?.length ? new Set(fields) : null;
+        const payload = {};
+        const put = (key, value) => {
+            if (!wanted || wanted.has(key)) payload[key] = value;
+        };
+
+        put("name", this.current.name);
+        put("location", this.current.location);
+        put("objective", this.current.objective);
+        put("password", this.current.password);
+        put("description", this.current.description);
+        put("status", this.current.status);
+        put("photos", this.current.photos || []);
+        put("notes", this.current.notes || []);
+        put("pages", this.current.pages || []);
+        put("audios", this.current.audios || []);
+        put("dossiers", this.current.dossiers || []);
+        put("board", this.current.board || { items: [], links: [] });
+
+        return payload;
+    }
+
+    async queueSave(payload = {}) {
+        if (!this.current?.id || !Object.keys(payload).length) return null;
+
+        const caseId = this.current.id;
+        this.pendingSave = this.pendingSave
+            .catch(() => null)
+            .then(async () => {
+                const updated = await MC.Services.Cases.patch(caseId, payload);
+                if (this.current?.id === caseId) {
+                    this.current = this.normalizeCase(updated);
+                    this.dirty = false;
+                }
+                return updated;
+            });
+
+        return await this.pendingSave;
+    }
+
+    saveSoon(fields = ["board"], delay = 220) {
+        clearTimeout(this.pendingSaveTimer);
+        this.pendingSaveTimer = setTimeout(() => {
+            this.quickSave(fields).catch(() => this.markDirty());
+        }, delay);
+    }
+
+    async quickSave(fields = null) {
+        return await this.queueSave(this.caseSavePayload(fields));
+    }
+
+    async flushPendingSave() {
+        const shouldSaveBoard = Boolean(this.pendingSaveTimer || this.boardWheelTimer);
+
+        clearTimeout(this.pendingSaveTimer);
+        this.pendingSaveTimer = null;
+        clearTimeout(this.boardWheelTimer);
+        this.boardWheelTimer = null;
+
+        if (shouldSaveBoard && this.current?.id) {
+            await this.quickSave(["board"]);
+        }
+
+        await (this.pendingSave || Promise.resolve());
     }
 
     async archiveCurrent() {
@@ -429,7 +497,7 @@ class Cases {
         });
         this.clear(["case-photo-title", "case-photo-url"]);
         this.byId("case-photo-form")?.classList.add("case-hidden");
-        this.saveAndRender();
+        this.saveAndRender(["photos"]);
     }
 
     addNote() {
@@ -443,7 +511,7 @@ class Cases {
             createdAt: new Date().toISOString()
         });
         this.clear(["case-note-title", "case-note-text"]);
-        this.saveAndRender();
+        this.saveAndRender(["notes"]);
     }
 
     async addQuickBoardNote() {
@@ -482,7 +550,7 @@ class Cases {
             createdAt: new Date().toISOString()
         });
         this.clear(["case-page-title", "case-page-text"]);
-        this.saveAndRender();
+        this.saveAndRender(["pages"]);
     }
 
     addAudio() {
@@ -495,7 +563,7 @@ class Cases {
             ownerId: MC.Services.Cases.currentUserId()
         });
         this.clear(["case-audio-title", "case-audio-url"]);
-        this.saveAndRender();
+        this.saveAndRender(["audios"]);
     }
 
     addDossier() {
@@ -509,12 +577,12 @@ class Cases {
             ownerId: MC.Services.Cases.currentUserId()
         });
         this.clear(["case-dossier-name", "case-dossier-photos", "case-dossier-description"]);
-        this.saveAndRender();
+        this.saveAndRender(["dossiers"]);
     }
 
-    async saveAndRender() {
+    async saveAndRender(fields = null) {
         try {
-            await this.quickSave();
+            await this.quickSave(fields);
             this.renderCurrent();
         } catch {
             this.markDirty();
@@ -1033,7 +1101,7 @@ class Cases {
         const link = this.current?.board?.links?.find(entry => entry.id === id);
         if (!link || !color) return;
         link.color = color;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     boardItemCenter(id) {
@@ -1084,7 +1152,7 @@ class Cases {
     dragEnd = async (event) => {
         window.removeEventListener("pointermove", this.dragMove);
         this.drag = null;
-        await this.quickSave();
+        await this.quickSave(["board"]);
     };
 
     async startResize(event, id) {
@@ -1125,7 +1193,7 @@ class Cases {
     resizeEnd = async () => {
         window.removeEventListener("pointermove", this.resizeMove);
         this.resize = null;
-        await this.quickSave();
+        await this.quickSave(["board"]);
     };
 
     async startPan(event) {
@@ -1197,7 +1265,7 @@ class Cases {
         window.removeEventListener("pointercancel", this.boardPointerEnd);
         this.boardPointerActive = false;
         this.pan = null;
-        await this.quickSave();
+        await this.quickSave(["board"]);
     };
 
     startBoardPinch() {
@@ -1290,7 +1358,7 @@ class Cases {
         this.markDirty();
 
         clearTimeout(this.boardWheelTimer);
-        this.boardWheelTimer = setTimeout(() => this.quickSave(), 260);
+        this.boardWheelTimer = setTimeout(() => this.quickSave(["board"]), 260);
     }
 
     async handleBoardLink(id, options = {}) {
@@ -1320,7 +1388,7 @@ class Cases {
             }
         }
         this.pendingLinkId = options.keepMode ? id : null;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     async editBoardLineLabel(id) {
@@ -1329,7 +1397,7 @@ class Cases {
         const label = await MC.UI.prompt("Texto entre as linhas:", link.label || "");
         if (label === null) return;
         link.label = label;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     async deleteBoardLine(id) {
@@ -1340,14 +1408,14 @@ class Cases {
         this.pendingLinkId = null;
         this.byId("case-board-add-line")?.classList.remove("active");
         this.byId("case-board-delete-line")?.classList.remove("active");
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     async deleteBoardItem(id) {
         if (!await MC.UI.confirm("Remover este item do quadro?")) return;
         this.current.board.items = this.current.board.items.filter(item => item.id !== id);
         this.current.board.links = this.current.board.links.filter(link => link.from !== id && link.to !== id);
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     resizeBoardItemBy(id, amount) {
@@ -1355,21 +1423,21 @@ class Cases {
         if (!item) return;
         item.width = this.clamp((Number(item.width) || 160) + amount, 90, 620);
         item.height = this.clamp((Number(item.height) || 100) + amount, 70, 520);
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     rotateBoardItem(id, amount) {
         const item = this.current.board.items.find(entry => entry.id === id);
         if (!item) return;
         item.rotation = (Number(item.rotation) || 0) + amount;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     toggleBoardHighlight(id) {
         const item = this.current.board.items.find(entry => entry.id === id);
         if (!item) return;
         item.highlighted = !item.highlighted;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     async editBoardSource(id) {
@@ -1385,7 +1453,7 @@ class Cases {
         if (text === null) return;
         item.title = title;
         item.text = text;
-        this.saveAndRender();
+        this.saveAndRender(["board"]);
     }
 
     zoomBoardItem(id) {

@@ -140,7 +140,11 @@ class LibraryService {
 
     canManageBook(book) {
 
-        return MC.Services.Permissions.isAdmin() || book?.ownerId === this.actor().id;
+        const actor = this.actor();
+
+        return MC.Services.Permissions.isAdmin()
+            || book?.ownerId === actor.id
+            || this.sameActorName(book?.ownerName, actor.name);
 
     }
 
@@ -159,21 +163,36 @@ class LibraryService {
         if (!book) throw new Error("Livro nao encontrado.");
         if (!this.canManageBook(book)) throw new Error("Somente o dono pode editar este livro.");
 
-        book.update({
-            title: data.title ?? book.title,
-            fontFamily: data.fontFamily ?? book.fontFamily,
-            textColor: data.textColor ?? book.textColor,
-            coverStyle: data.coverStyle ?? book.coverStyle,
-            coverColor: data.coverColor ?? book.coverColor,
-            coverBorderColor: data.coverBorderColor ?? book.coverBorderColor,
-            pageStyle: data.pageStyle ?? book.pageStyle,
-            pageColor: data.pageColor ?? book.pageColor,
-            seal: data.seal ?? book.seal,
-            password: data.password ?? book.password,
-            references: Array.isArray(data.references) ? data.references : book.references
+        const allowed = [
+            "title",
+            "fontFamily",
+            "textColor",
+            "coverStyle",
+            "coverColor",
+            "coverBorderColor",
+            "pageStyle",
+            "pageColor",
+            "seal",
+            "password",
+            "references"
+        ];
+        const payload = {};
+
+        allowed.forEach(key => {
+            if (!Object.prototype.hasOwnProperty.call(data, key)) return;
+            if (key === "references" && !Array.isArray(data.references)) return;
+            payload[key] = data[key];
+            book[key] = data[key];
         });
 
-        return await this.bookRepository.update(book);
+        if (!Object.keys(payload).length) return book;
+
+        payload.updatedAt = new Date().toISOString();
+        book.updatedAt = payload.updatedAt;
+
+        await MC.Database.update(`books/${id}`, payload);
+
+        return book;
 
     }
 
@@ -233,7 +252,18 @@ class LibraryService {
 
     canEditPage(page) {
 
-        return MC.Services.Permissions.isAdmin() || page?.ownerId === this.actor().id;
+        const actor = this.actor();
+
+        return MC.Services.Permissions.isAdmin()
+            || page?.ownerId === actor.id
+            || this.sameActorName(page?.ownerName, actor.name);
+
+    }
+
+    sameActorName(a, b) {
+
+        const normalize = value => String(value || "").trim().toLowerCase();
+        return Boolean(normalize(a) && normalize(a) === normalize(b));
 
     }
 
@@ -267,16 +297,34 @@ class LibraryService {
 
     }
 
+    async persistPagePatch(page, patch = {}) {
+
+        if (!page?.id) return null;
+
+        const payload = {
+            ...patch,
+            id: page.id,
+            updatedAt: new Date().toISOString()
+        };
+
+        const success = await MC.Database.update(`bookPages/${page.id}`, payload);
+        if (!success) throw new Error("Nao foi possivel salvar a pagina.");
+
+        Object.assign(page, payload);
+
+        return new LibraryPageModel(page.toJSON ? page.toJSON() : page);
+
+    }
+
     async updateDrawings(pageId, drawings = []) {
 
         const page = await this.findPage(pageId);
         if (!page) throw new Error("Pagina nao encontrada.");
         if (page.torn) throw new Error("Pagina arrancada nao pode receber desenhos.");
 
-        page.drawings = Array.isArray(drawings) ? drawings : [];
-        page.touch();
-
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, {
+            drawings: Array.isArray(drawings) ? drawings : []
+        });
 
     }
 
@@ -320,10 +368,7 @@ class LibraryService {
             createdAt: new Date().toISOString()
         });
 
-        page.notes = notes;
-        page.touch();
-
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { notes });
 
     }
 
@@ -346,10 +391,7 @@ class LibraryService {
             createdAt: new Date().toISOString()
         });
 
-        page.images = images;
-        page.touch();
-
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { images });
 
     }
 
@@ -375,7 +417,7 @@ class LibraryService {
         if (!image) throw new Error("Imagem nao encontrada.");
         if (!this.canManagePageAsset(page, image)) throw new Error("Somente quem adicionou a imagem pode altera-la.");
 
-        page.images = (page.images || []).map(entry =>
+        const images = (page.images || []).map(entry =>
             entry.id === imageId
                 ? {
                     ...entry,
@@ -386,9 +428,8 @@ class LibraryService {
                 }
                 : entry
         );
-        page.touch();
 
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { images });
 
     }
 
@@ -401,10 +442,9 @@ class LibraryService {
         if (!image) return page;
         if (!this.canManagePageAsset(page, image)) throw new Error("Somente quem adicionou a imagem pode remove-la.");
 
-        page.images = (page.images || []).filter(entry => entry.id !== imageId);
-        page.touch();
+        const images = (page.images || []).filter(entry => entry.id !== imageId);
 
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { images });
 
     }
 
@@ -413,14 +453,13 @@ class LibraryService {
         const page = await this.findPage(pageId);
         if (!page || page.torn) throw new Error("Pagina indisponivel.");
 
-        page.notes = (page.notes || []).map(note =>
+        const notes = (page.notes || []).map(note =>
             note.id === noteId
                 ? { ...note, ...data, id: note.id }
                 : note
         );
-        page.touch();
 
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { notes });
 
     }
 
@@ -437,10 +476,9 @@ class LibraryService {
             throw new Error("Somente quem adicionou a nota pode remove-la.");
         }
 
-        page.notes = (page.notes || []).filter(entry => entry.id !== noteId);
-        page.touch();
+        const notes = (page.notes || []).filter(entry => entry.id !== noteId);
 
-        return await this.pageRepository.update(page);
+        return await this.persistPagePatch(page, { notes });
 
     }
 
