@@ -1729,6 +1729,10 @@ class Library {
             return true;
         }
 
+        if (!this.bookDirty) {
+            return true;
+        }
+
         const payload = this.bookSavePayload();
         if (!this.hasBookChanges(payload)) {
             this.bookDirty = false;

@@ -54,6 +54,7 @@ class Auth extends CoreModule {
     async login(name, password = "") {
 
         name = name.trim();
+        const usernameKey = this.usernameKey(name);
 
         if (!name.length) {
 
@@ -93,6 +94,18 @@ class Auth extends CoreModule {
                 `users/${user.id}`,
 
                 user
+
+            );
+
+            await MC.Database.set(
+
+                `usernames/${usernameKey}`,
+
+                {
+
+                    id: user.id
+
+                }
 
             );
 
@@ -197,6 +210,10 @@ async logout() {
 
         const index = await MC.Database.get(
 
+            `usernames/${this.usernameKey(name)}`
+
+        ) || await MC.Database.get(
+
             `usernames/${name}`
 
         );
@@ -270,7 +287,7 @@ async logout() {
 
         await MC.Database.set(
 
-            `usernames/${name}`,
+            `usernames/${this.usernameKey(name)}`,
 
             {
 
@@ -280,7 +297,29 @@ async logout() {
 
         );
 
+        if (this.usernameKey(name) !== name) {
+
+            await MC.Database.set(
+
+                `usernames/${name}`,
+
+                {
+
+                    id
+
+                }
+
+            );
+
+        }
+
         return user;
+
+    }
+
+    usernameKey(name) {
+
+        return String(name || "").trim().toLowerCase();
 
     }
 
